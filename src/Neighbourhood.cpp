@@ -1,6 +1,6 @@
 // LOCAL LIBRARIES
-#include "Neighbourhood.h"
-#include "Server.h"
+#include "include/Neighbourhood.h"
+#include "include/Server.h"
 
 Neighbourhood::Neighbourhood() {
     // constructor implementation
