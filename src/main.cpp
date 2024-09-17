@@ -44,15 +44,16 @@
 #include <map>
 
 // OPENSSL LIBRARIES
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
-#include <openssl/aes.h>
-#include <openssl/evp.h>
-#include <openssl/sha.h>
+#include "external_libs/openssl/include/openssl/rsa.h"
+#include "external_libs/openssl/include/openssl/pem.h"
+#include "external_libs/openssl/include/openssl/aes.h"
+#include "external_libs/openssl/include/openssl/evp.h"
+#include "external_libs/openssl/include/openssl/sha.h"
 
 // WEBSOCKETS LIBRARIES
-#include <websocketpp/config/asio_no_tls.hpp>
-#include <websocketpp/server.hpp>
+#include <boost/boost/hof/version.hpp>
+#include "external_libs/websocketpp/websocketpp/config/asio_no_tls.hpp"
+#include "external_libs/websocketpp/websocketpp/server.hpp"
 
 // LOCAL LIBRARIES
 #include "include/User.h"
