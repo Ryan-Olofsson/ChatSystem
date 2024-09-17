@@ -55,9 +55,9 @@
 #include <websocketpp/server.hpp>
 
 // LOCAL LIBRARIES
-#include "User.h"
-#include "Server.h"
-#include "Neighbourhood.h"
+#include "include/User.h"
+#include "include/Server.h"
+#include "include/Neighbourhood.h"
 
 int main() {
     Neighbourhood neighbourhood;
