@@ -2,10 +2,15 @@
 CXX = g++
 
 # compiler flags
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -I$(PROJECT_ROOT)/external_libs/boost -I$(PROJECT_ROOT)/external_libs/websocketpp -I$(PROJECT_ROOT)/external_libs/openssl/include
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic \
+           -I. -I./include \
+           -I./external_libs/boost \
+           -I./external_libs/websocketpp \
+           -I./external_libs/openssl/include \
+           -I./external_libs/openssl
 
-# libraries
-LIBS = -L$(PROJECT_ROOT)/external_libs/openssl/lib -lssl -lcrypto -lboost_system
+# linker flags
+LDFLAGS = -L./external_libs/openssl -lssl -lcrypto -lboost_system
 
 # project root directory
 PROJECT_ROOT = .
@@ -24,7 +29,7 @@ all: $(TARGET)
 
 # linking the executable
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $(TARGET) $(LIBS)
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $(TARGET) $(LDFLAGS)
 
 # compiling source files
 %.o: %.cpp
@@ -32,7 +37,7 @@ $(TARGET): $(OBJS)
 
 # clean up
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGET) $(OBJS) test_server
 
 # install dependencies
 install_deps:
@@ -71,5 +76,13 @@ install_deps:
 		fi; \
 	done
 
+# test server target
+test_server: tests/test_server.cpp src/Server.cpp
+	$(CXX) $(CXXFLAGS) -o test_server tests/test_server.cpp src/Server.cpp $(LDFLAGS)
+
+# test target
+test: test_server
+	./test_server
+
 # phony targets
-.PHONY: all clean install_deps
+.PHONY: all clean install_deps test

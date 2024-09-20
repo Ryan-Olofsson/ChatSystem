@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "include/User.h"
-#include "include/Neighbourhood.h" 
+#include "User.h"
+#include "Neighbourhood.h" 
 
 // WEBSOCKETS LIBRARIES
 #include <websocketpp/config/asio_no_tls.hpp>
