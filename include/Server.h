@@ -12,14 +12,20 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
+class Neighbourhood;
+class User;
 
 class Server {
 public:
+
+    // constructor and destructor
     Server(const std::string& address, int port);
     ~Server();
 
-    void start();
-    void stop();
+    // server control methods
+    void startServer();
+    void stopServer();
+    bool isRunning() const;
     void setNeighbourhood(Neighbourhood* neighbourhood);
     void addConnectedClient(const std::string& fingerprint, User* user);
     void removeConnectedClient(const std::string& fingerprint);
@@ -27,17 +33,40 @@ public:
     void onClose(websocketpp::connection_hdl hdl);
     const std::map<std::string, User*>& getConnectedClients() const { return connectedClients; }
 
+    // These methods process different types of incoming messages
+    void handleHelloMessage(websocketpp::connection_hdl hdl, const std::string& message);
+    void handleChatMessage(websocketpp::connection_hdl hdl, const std::string& message);
+    void handlePublicChatMessage(websocketpp::connection_hdl hdl, const std::string& message);
+    void handleClientListRequest(websocketpp::connection_hdl hdl);
+    void sendClientUpdate();
+    void handleClientUpdateRequest(const std::string& serverAddress);
+    
+    // File transfer methods
+    std::string handleFileUpload(const std::string& fileData);
+    std::string handleFileRetrieve(const std::string& fileUrl);
+
+    // Encryption methods
+    std::string encryptMessage(const std::string& message, const std::string& recipientPublicKey);
+    std::string decryptMessage(const std::string& encryptedMessage, const std::string& privateKey);
+
 private:
+
+    // server attributes
     std::string address;
     int port;
     std::map<std::string, User*> connectedClients;
     Neighbourhood* neighbourhood;
     websocketpp::server<websocketpp::config::asio> server;
+    bool serverRunning;
 
+    // websocket message handling
     void onMessage(websocketpp::connection_hdl hdl, websocketpp::server<websocketpp::config::asio>::message_ptr msg);
     void relayMessage(const std::string& message, const std::string& destinationServer);
     void broadcastToClients(const std::string& message);
     User* findUserByHandle(websocketpp::connection_hdl hdl);
+
+    // client update methods
+    void updateConnectedClients(const std::string& fingerprint, bool isConnected);
 };
 
-#endif 
+#endif
