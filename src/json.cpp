@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <json.hpp>
+#include <base64.hpp>
 
 using json = nlohmann::json;
 using namespace std; 
@@ -86,11 +87,24 @@ struct ChatDataStructure {
     string chat;
 };
 
+json createSignedMessage(const json& data, uint32_t counter) {
+    json message;
+    message["type"] = "signed_data";
+    message["data"] = data;
+    message["counter"] = counter;
 
-void sendHello (const string& publicKey) {
-    ClientHelloData helloData = { "hello", publicKey };
-    ClientHelloMessage helloMessage = { helloData };
+    string messageStr = message.dump();
+
+    string signatureInput = messageStr + to_string(counter);
+    string signature = macaron::Base64::Encode(signatureInput);
+
+    message["signature"] = signature;
+    return message;
 }
+// void sendHello (const string& publicKey, uint32_t& counter) {
+//     ClientHelloData helloData = { "hello", publicKey };
+//     ClientHelloMessage helloMessage = { helloData };
+// };
 
 int main() {
 
