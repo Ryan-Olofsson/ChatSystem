@@ -167,7 +167,23 @@ json createClientList(const vector<ServerInfo>& servers) { //still needs server 
     }
     return clientList;
 }
+
+json createClientUpdate(const vector<string>& clients) { // good idea to call this function when you get a client hello, or a client disconnect
+    json clientUpdate;
+    clientUpdate["type"] = "client_update";
+    clientUpdate["clients"] = clients; //clients passed in and should be the RSA public keys of clients
+
+    return clientUpdate; 
+}
+
+json createClientUpdateRequest() { // needs implementation, basically when a server comes online it will send this to all the other servers to get an updated client list
+    json clientUpdateRequest;
+    clientUpdateRequest["type"] = "client_update_request";
+    return clientUpdateRequest;
+}
+
 int main() {
+
 
 
 
