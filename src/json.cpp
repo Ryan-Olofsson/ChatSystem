@@ -176,17 +176,13 @@ json createClientUpdate(const vector<string>& clients) { // good idea to call th
     return clientUpdate; 
 }
 
-json createClientUpdateRequest() { // needs implementation, basically when a server comes online it will send this to all the other servers to get an updated client list
+json createClientUpdateRequest() { // needs implementation, basically when a server comes online it will send i think
     json clientUpdateRequest;
     clientUpdateRequest["type"] = "client_update_request";
     return clientUpdateRequest;
 }
 
 int main() {
-
-
-
-
 
 }
 
