@@ -22,7 +22,7 @@ using namespace std;
 // #define MAX_AES_IV_LEN 16
 // #define MAX_ENCRYPTED_KEY_LEN 256
 
-
+static uint32_t m_counter = 0;
 
 struct ClientMessageStructure {
     string type;
@@ -47,7 +47,6 @@ struct ServerClientListRequest {
 struct ServerInfo {
     string address;
     vector<string> clients;
-    int client_count;
 };
 
 struct ClientList {
@@ -87,26 +86,91 @@ struct ChatDataStructure {
     string chat;
 };
 
-json createSignedMessage(const json& data, uint32_t counter) {
+json createSignedMessage(const json& data) {
     json message;
     message["type"] = "signed_data";
     message["data"] = data;
-    message["counter"] = counter;
+    message["counter"] = m_counter;
 
     string messageStr = message.dump();
-
-    string signatureInput = messageStr + to_string(counter);
+    string signatureInput = messageStr + to_string(m_counter);
     string signature = macaron::Base64::Encode(signatureInput);
 
     message["signature"] = signature;
+    m_counter++;
     return message;
 }
-// void sendHello (const string& publicKey, uint32_t& counter) {
-//     ClientHelloData helloData = { "hello", publicKey };
-//     ClientHelloMessage helloMessage = { helloData };
-// };
 
+
+json helloMessage(const string& publicKey) {
+
+    json helloData;
+    helloData["type"] = "hello";
+    helloData["public_key"] = publicKey; // still needs implementation
+
+    return createSignedMessage(helloData);
+}
+
+json createChatMessage(const vector<string>& destinations, const string& iv, const vector<string>& symmKeys, const json& innerChat) {
+    json chatData;
+    chatData["type"] = "chat";
+    chatData["destinations"] = destinations; // still needs implementation
+    chatData["iv"] = iv; // still needs implementation
+    chatData["symm_keys"] = symmKeys; // still needs implementation
+    chatData["chat"] = innerChat;
+
+    return createSignedMessage(chatData);
+    
+}
+
+json innerChatMessage(const vector<string>& participants, const string& message) { // tracking of participants and whatnot needs implementation
+    json chatInner;
+    vector<string> base64Participants;
+    for (const auto& participant : participants) {
+        base64Participants.push_back(encodeFingerprint(participant));
+    }
+    chatInner["participants"] = base64Participants; // base64 encoded list of fingerprints of participants, starting with sender
+
+    chatInner["message"] = message;
+
+
+    return chatInner;
+}
+
+string encodeFingerprint(const string& fingerprint) { // helper function to encode a fingerprint in base64
+    return macaron::Base64::Encode(fingerprint);
+}
+
+
+json publicChat(const string& fingerprint, const string& message) {
+    json publicChatData;
+    publicChatData["type"] = "public_chat";
+    publicChatData["sender"] = encodeFingerprint(fingerprint); 
+    publicChatData["message"] = message;
+    return createSignedMessage(publicChatData); // unsure if we need public chat but got it here just in case
+}
+
+json createClientList(const vector<ServerInfo>& servers) { //still needs server tracking implementation?
+    json clientList;
+    clientList["type"] = "client_list";
+    clientList["servers"] = json::array();
+    
+    for (const auto& server : servers) { // still needs implementation
+        json serverInfo; 
+        serverInfo["address"] = server.address; 
+        serverInfo["clients"] = json::array();
+        
+        for (const auto& client : server.clients) {
+            serverInfo["clients"].push_back(client); // add each client to the clients array
+    }
+    clientList["servers"].push_back(serverInfo);
+    }
+    return clientList;
+}
 int main() {
+
+
+
 
 }
 
