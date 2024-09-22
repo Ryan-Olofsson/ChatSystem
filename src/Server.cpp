@@ -253,3 +253,7 @@ std::string Server::decryptMessage(const std::string& encryptedMessage, const st
 void Server::updateConnectedClients(const std::string& fingerprint, bool isConnected) {
     // todo: implement updating connected clients list
 }
+
+std::string Server::getAddress() const {
+    return address; // Return the address of the server
+}

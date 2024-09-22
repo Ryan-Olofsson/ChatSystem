@@ -2,6 +2,8 @@
 #include "include/Neighbourhood.h"
 #include "include/Server.h"
 
+using namespace std;
+
 Neighbourhood::Neighbourhood() {
     // constructor implementation
 }
@@ -11,20 +13,24 @@ Neighbourhood::~Neighbourhood() {
 }
 
 void Neighbourhood::addServer(Server* server) {
-    // add server implementation
+    servers.push_back(server);
 }
 
 void Neighbourhood::removeServer(Server* server) {
-    // remove server implementation
+    servers.erase(remove(servers.begin(), servers.end(), server), servers.end());
 }
 
 std::vector<Server*> Neighbourhood::getServers() const {
-    // get servers implementation
     return servers;
 }
 
 Server* Neighbourhood::findServer(const std::string& address) const {
     // find server implementation
+    for (auto server : servers) {
+        if (server->getAddress() == address) {
+            return server;
+        }
+    }
     return nullptr;
 }
 

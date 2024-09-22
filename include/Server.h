@@ -53,6 +53,9 @@ public:
     void startHTTPServer();
     void stopHTTPServer();
 
+    // additional methods for Neighbourhood
+    std::string getAddress() const;
+
 private:
 
     // server attributes
