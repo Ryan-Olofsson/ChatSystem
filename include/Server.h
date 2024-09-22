@@ -49,6 +49,10 @@ public:
     std::string encryptMessage(const std::string& message, const std::string& recipientPublicKey);
     std::string decryptMessage(const std::string& encryptedMessage, const std::string& privateKey);
 
+    // HTTP server methods
+    void startHTTPServer();
+    void stopHTTPServer();
+
 private:
 
     // server attributes
@@ -67,6 +71,9 @@ private:
 
     // client update methods
     void updateConnectedClients(const std::string& fingerprint, bool isConnected);
+
+    // HTTP server
+    httplib::Server httpServer; 
 };
 
 #endif

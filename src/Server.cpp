@@ -2,6 +2,15 @@
 #include <iostream>
 #include "include/User.h"
 #include "include/Neighbourhood.h"
+#include <njson.hpp>
+#include <httplib.h>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+using namespace std;
+using json = nlohmann::json;
+
 
 // server constructor
 Server::Server(const std::string& address, int port) : address(address), port(port), neighbourhood(nullptr) {
@@ -180,14 +189,55 @@ void Server::handleClientUpdateRequest(const std::string& serverAddress) {
     // todo: implement handling client update requests from other servers
 }
 
+
 std::string Server::handleFileUpload(const std::string& fileData) {
     // todo: implement file upload handling
-    return "";
+    boost::uuids::uuid uuid = boost::uuids::random_generator()(); //generate unique filename
+    string filename = to_string(uuid); 
+    ofstream ofs(filename, ios::binary);
+    ofs << fileData;
+    ofs.close();
+    return "/api/download/" + filename;
 }
 
 std::string Server::handleFileRetrieve(const std::string& fileUrl) {
     // todo: implement file retrieval
-    return "";
+    ifstream ifs(fileUrl, ios::binary);
+    if (ifs) {
+        string content((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
+        return content;
+    }
+    return "file content not found";
+}
+
+void Server::startHTTPServer() {
+
+    httpServer.Post("/api/upload", [this](const httplib::Request& req, httplib::Response& res) {
+        auto file = req.get_file_value("file");
+        string fileData = file.content;
+        string fileUrl = handleFileUpload(fileData);
+        json response;
+        response["file_url"] = fileUrl;
+        res.set_content(response.dump(), "application/json");
+    });
+
+    httpServer.Get(R"(/api/download/(.*))", [this](const httplib::Request& req, httplib::Response& res) {
+        string fileUrl = req.matches[1];
+        string fileContent = handleFileRetrieve(fileUrl);
+        if (!fileContent.empty()) {
+            res.set_content(fileContent, "application/octet-stream");
+            res.set_header("Content-Disposition", "attachment; filename=" + fileUrl);
+        } else {
+            res.status = 404;
+            res.set_content("file not found", "text/plain");
+        }
+    });
+
+    httpServer.listen("0.0.0.0", 8080);
+}
+
+void Server::stopHTTPServer() { // call to stop the HTTP server
+    httpServer.stop();
 }
 
 std::string Server::encryptMessage(const std::string& message, const std::string& recipientPublicKey) {
