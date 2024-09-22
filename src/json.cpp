@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <json.hpp>
-#include <base64.hpp>
+#include <njson.hpp>
+#include <sbase64.hpp>
 
 using json = nlohmann::json;
 using namespace std; 
