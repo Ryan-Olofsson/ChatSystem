@@ -182,7 +182,4 @@ json createClientUpdateRequest() { // needs implementation, basically when a ser
     return clientUpdateRequest;
 }
 
-int main() {
-
-}
 

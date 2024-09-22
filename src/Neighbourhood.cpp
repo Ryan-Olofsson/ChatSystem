@@ -10,6 +10,10 @@ Neighbourhood::Neighbourhood() {
 
 Neighbourhood::~Neighbourhood() {
     // destructor implementation
+    for (auto server : servers) {
+        delete server;
+    }
+    servers.clear();
 }
 
 void Neighbourhood::addServer(Server* server) {
