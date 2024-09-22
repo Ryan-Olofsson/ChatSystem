@@ -3,11 +3,13 @@
 #include <string>
 #include <iostream>
 
+#include <iomanip>
+#include <sstream>
+
 // OPENSSL LIBRARIES
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
-
 #include <openssl/bn.h>
 
 
@@ -51,6 +53,11 @@ std::string User::getFingerprint() const {
     return fingerprint;
 }
 
+std::string User::getPublicKeyPEM() const {
+    // todo: implement getpublickeypem
+    return publicKeyPEM;
+}
+
 void User::generateKeyPair() {
     // todo: implement generatekeypair
 
@@ -85,26 +92,52 @@ void User::generateKeyPair() {
     }
 
 
-    /* Cursor code for 
-
-    // Export public key in SPKI format
+    // Create Basic Input/Output
     BIO* bio = BIO_new(BIO_s_mem());
+
+    // Write the RSA public key in SPKI format to the BIO
     if (!PEM_write_bio_RSA_PUBKEY(bio, publicKey)) {
         BIO_free(bio);
         throw std::runtime_error("Failed to export public key in SPKI format");
     }
 
+    // Get the PEM data from the BIO
     char* pem_key = nullptr;
     long pem_size = BIO_get_mem_data(bio, &pem_key);
     publicKeyPEM = std::string(pem_key, pem_size);
 
+    // Free the BIO
     BIO_free(bio);
 
-    */
 }
 
 void User::calculateFingerprint() {
     // todo: implement calculatefingerprint
+
+    // Check if publicKeyPEM is empty
+    if (publicKeyPEM.empty()) {
+        throw std::runtime_error("Public key not available");
+    }
+
+    // Create a SHA256 context and hash
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+
+    // Update the context with the public key PEM data
+    SHA256_Update(&sha256, publicKeyPEM.data(), publicKeyPEM.length());
+
+    // Finalize the hash
+    SHA256_Final(hash, &sha256);
+
+    // Convert the hash to a hexadecimal string
+    std::stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
+    }
+
+    // Convert stringstream to string and save to fingerprint
+    fingerprint = ss.str();
 
 }
 

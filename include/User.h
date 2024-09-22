@@ -20,7 +20,8 @@ public:
     RSA* getPublicKey() const;
     RSA* getPrivateKey() const;
     std::string getFingerprint() const;
-
+    std::string getPublicKeyPEM() const;
+    
     // encryption and decryption methods
     std::string encryptMessage(const std::string& message, RSA* recipientPublicKey) const;
     std::string decryptMessage(const std::string& encryptedMessage) const;
@@ -35,6 +36,7 @@ private:
     RSA* publicKey;
     RSA* privateKey;
     std::string fingerprint;
+    std::string publicKeyPEM;
 
     // helper methods
     void generateKeyPair();
