@@ -23,8 +23,8 @@ public:
     std::string getPublicKeyPEM() const;
     
     // encryption and decryption methods
-    std::string encryptMessage(const std::string& message, RSA* recipientPublicKey) const;
-    std::string decryptMessage(const std::string& encryptedMessage) const;
+    std::string encryptMessage(const std::string& message, RSA* publicKey) const;
+    std::string decryptMessage(const std::string& encryptedMessage, RSA* privateKey) const;
 
     // signing and verification methods
     std::string signMessage(const std::string& message) const;

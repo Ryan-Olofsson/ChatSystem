@@ -123,10 +123,10 @@ json createChatMessage(const vector<string>& destinations, const string& iv, con
     
 }
 
-json innerChatMessage(const vector<string>& participants, const string& message) { // tracking of participants and whatnot needs implementation
+json innerChatMessage(const vector<string>& participantsSignatures, const string& message) { // tracking of participants and whatnot needs implementation
     json chatInner;
     vector<string> base64Participants;
-    for (const auto& participant : participants) {
+    for (const auto& participant : participantsSignatures) {
         base64Participants.push_back(encodeFingerprint(participant));
     }
     chatInner["participants"] = base64Participants; // base64 encoded list of fingerprints of participants, starting with sender
