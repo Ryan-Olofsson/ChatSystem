@@ -247,13 +247,97 @@ std::string User::decryptMessage(const std::string &encryptedMessage, RSA* priva
 std::string User::signMessage(const std::string &message) const {
     // todo: implement signmessage
 
-    return "";
+    // Create a new EVP_MD_CTX for the signing operation
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_MD_CTX");
+    }
+
+    // Initialize the signing operation with the private key and SHA-256
+    EVP_PKEY_CTX* pkey_ctx;
+    if (EVP_DigestSignInit(ctx, &pkey_ctx, EVP_sha256(), nullptr, privateKey) != 1) {
+
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize signing operation");
+    }
+
+    // Set the RSA-PSS padding scheme with a salt length of 32 bytes
+    if (EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PSS_PADDING) != 1 ||
+        EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, 32) != 1) {
+
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to set RSA-PSS padding");
+    }
+
+    // Hashes the message and adds it to the signing operation
+    if (EVP_DigestSignUpdate(ctx, message.data(), message.size()) != 1) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to update signing operation");
+    }
+
+    // Determine the size of the signature
+    size_t sigLen;
+    if (EVP_DigestSignFinal(ctx, nullptr, &sigLen) != 1) {
+
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize signing operation");
+    }
+
+    // Allocate memory for the signature
+    std::vector<unsigned char> signature(sigLen);
+
+    // Finalize the signing operation to get the actual signature
+    if (EVP_DigestSignFinal(ctx, signature.data(), &sigLen) != 1) {
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize signing operation");
+    }
+
+    // Free the EVP_MD_CTX
+    EVP_MD_CTX_free(ctx);
+
+    // Convert the signature to a string and return it
+    return std::string(reinterpret_cast<char*>(signature.data()), sigLen);
 }
 
 bool User::verifySignature(const std::string &message, const std::string &signature, RSA* signerPublicKey) const {
     // todo: implement verifysignature
 
-    return false;
+    // Create a new EVP_MD_CTX for the verification operation
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    if (!ctx) {
+        throw std::runtime_error("Failed to create EVP_MD_CTX");
+    }
+
+    // Initialize the verification operation with the public key and SHA-256
+    EVP_PKEY_CTX* pkey_ctx;
+    if (EVP_DigestVerifyInit(ctx, &pkey_ctx, EVP_sha256(), nullptr, signerPublicKey) != 1) {
+
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize verification operation");
+    }
+
+    // Set the RSA-PSS padding scheme with a salt length of 32 bytes
+    if (EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PSS_PADDING) != 1 ||
+        EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, 32) != 1) {
+
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to set RSA-PSS padding");
+    }
+
+    // Add the message to be verified
+    if (EVP_DigestVerifyUpdate(ctx, message.data(), message.size()) != 1) {
+        
+        EVP_MD_CTX_free(ctx);
+        throw std::runtime_error("Failed to update verification operation");
+    }
+
+    // Verify the signature
+    bool result = EVP_DigestVerifyFinal(ctx, reinterpret_cast<const unsigned char*>(signature.data()), signature.size()) == 1;
+
+    // Free the EVP_MD_CTX
+    EVP_MD_CTX_free(ctx);
+
+    return result;
 }
 
 void User::sendMessage(const std::string& message) const { //eventually need this? not sure, only adding to remove errors for now.
