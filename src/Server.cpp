@@ -7,6 +7,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <jsonfunctions.hpp>
 
 using namespace std;
 using json = nlohmann::json;
@@ -105,21 +106,25 @@ bool Server::isRunning() const {
 }
 
 void Server::setNeighbourhood(Neighbourhood* neighbourhood) {
-
+    this->neighbourhood = neighbourhood;
     // set the neighbourhood
 
 }
 
 void Server::addConnectedClient(const std::string& fingerprint, User* user) {
+    connectedClients[fingerprint] = user;
 
     // add a connected client
 
 }
 
 void Server::removeConnectedClient(const std::string& fingerprint) {
-
+    auto it = connectedClients.find(fingerprint);
+    if (it != connectedClients.end()) {
+        delete it->second;
+        connectedClients.erase(it);
+    }
     // remove a connected client
-
 }
 
 void Server::onOpen(websocketpp::connection_hdl hdl) {
@@ -156,9 +161,12 @@ void Server::broadcastToClients(const std::string& message) {
 
 }
 
-User* Server::findUserByHandle(websocketpp::connection_hdl hdl) {
-    // todo: implement this method
-    // find and return the User associated with the given connection handle
+User* Server::findUserByHandle(websocketpp::connection_hdl hdl) {    // find and return the User associated with the given connection handle
+    for (const auto& client : connectedClients) { // iterate through connected clients
+        if (!client.second->getHandle().owner_before(hdl) && !hdl.owner_before(client.second->getHandle())) { // if the handle is the same as the one passed in
+            return client.second; // return the user
+        }
+    }
     return nullptr;
 }
 
@@ -167,10 +175,26 @@ User* Server::findUserByHandle(websocketpp::connection_hdl hdl) {
 
 void Server::handleHelloMessage(websocketpp::connection_hdl hdl, const std::string& message) {
     // todo: implement hello message handling
+    json msg = json::parse(message); // parse the message
+    string publicKey = msg["public_key"]; // get the public key
+    User* user = new User(publicKey); // create a new user
+    addConnectedClient(user->getFingerprint(), user); // add the user to the connected clients
+    sendClientUpdate(); // send a client update (not sure if need to do this)
 }
 
 void Server::handleChatMessage(websocketpp::connection_hdl hdl, const std::string& message) {
     // todo: implement chat message handling
+    // User* user = findUserByHandle(hdl); // find the user by handle
+    // if (sender) {
+    //     json msg = json::parse(message);
+    //     std::vector<std::string> destinations = msg["destinations"];
+    //     std::string iv = msg["iv"];
+    //     std::vector<std::string> symmKeys = msg["symm_keys"];
+    //     json innerChat = msg["chat"];
+    //     json chatMessage = createChatMessage(destinations, iv, symmKeys, innerChat);
+    //     broadcastToClients(chatMessage.dump());
+    // }
+    // not sure if this is correct but could be something along these lines?
 }
 
 void Server::handlePublicChatMessage(websocketpp::connection_hdl hdl, const std::string& message) {
@@ -179,14 +203,35 @@ void Server::handlePublicChatMessage(websocketpp::connection_hdl hdl, const std:
 
 void Server::handleClientListRequest(websocketpp::connection_hdl hdl) {
     // todo: implement client list request handling
+    std::vector<ServerInfo> serverInfos;
+    for (const auto& server : neighbourhood->getServers()) {
+        ServerInfo info;
+        info.address = server->getAddress();
+
+        for (const auto& client : server->getConnectedClients()) {
+            info.clients.push_back(client.first);
+        }
+        serverInfos.push_back(info);
+    }
+
+    json clientList = createClientList(serverInfos);
+    server.send(hdl, clientList.dump(), websocketpp::frame::opcode::text);
 }
 
 void Server::sendClientUpdate() {
+    std::vector<std::string> clients;
+    for (const auto& client : connectedClients) {
+        clients.push_back(client.first);
+    }
+    json clientUpdate = createClientUpdate(clients);
+    broadcastToClients(clientUpdate.dump());
     // todo: implement sending client updates to other servers
 }
 
 void Server::handleClientUpdateRequest(const std::string& serverAddress) {
     // todo: implement handling client update requests from other servers
+    json clientUpdateRequest = createClientUpdateRequest();
+    relayMessage(clientUpdateRequest.dump(), serverAddress);
 }
 
 

@@ -3,6 +3,7 @@
 
 // LOCAL LIBRARIES
 #include <string>
+#include <websocketpp/common/connection_hdl.hpp>
 
 // OPENSSL LIBRARIES
 #include <openssl/evp.h>
@@ -12,7 +13,7 @@
 class User {
 public:
     // constructor and destructor
-    User(const std::string& name);
+    User(const std::string& name); // maybe add websocketpp::connection_hdl
     ~User();
 
     // getters
@@ -21,6 +22,7 @@ public:
     RSA* getPrivateKey() const;
     std::string getFingerprint() const;
     std::string getPublicKeyPEM() const;
+    websocketpp::connection_hdl getHandle() const;
     
     // encryption and decryption methods
     std::string encryptMessage(const std::string& message, RSA* publicKey) const;
@@ -37,6 +39,7 @@ private:
     RSA* privateKey;
     std::string fingerprint;
     std::string publicKeyPEM;
+    websocketpp::connection_hdl handle;
 
     // helper methods
     void generateKeyPair();
