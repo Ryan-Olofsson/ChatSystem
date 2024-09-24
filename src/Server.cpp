@@ -118,16 +118,13 @@ void Server::setNeighbourhood(Neighbourhood* neighbourhood) {
 
 void Server::addConnectedClient(const std::string& fingerprint, User* user) {
 
-    // the original code doesnt check if the user is already 
-    // connected before adding them to the connected clients map.
-    // this could cause overwriting of existing connections.
-    // connectedClients[fingerprint] = user;
-
-    // adding a check to prevent overwriting existing connections
+    // Check if the user is already connected
     if (connectedClients.find(fingerprint) == connectedClients.end()) {
         connectedClients[fingerprint] = user;
     } else {
-        std::cerr << "User with fingerprint " << fingerprint << " is already connected." << std::endl;
+        std::cerr << "User with fingerprint " << fingerprint << " is already connected. Deleting the old user." << std::endl;
+        delete connectedClients[fingerprint]; // Delete the old user to prevent memory leak
+        connectedClients[fingerprint] = user; // Update with the new user
     }
 
 }
@@ -135,7 +132,7 @@ void Server::addConnectedClient(const std::string& fingerprint, User* user) {
 void Server::removeConnectedClient(const std::string& fingerprint) {
     auto it = connectedClients.find(fingerprint);
     if (it != connectedClients.end()) {
-        delete it->second;
+        delete it->second; // Delete the user to prevent memory leak
         connectedClients.erase(it);
     }
     // remove a connected client
