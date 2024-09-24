@@ -255,3 +255,11 @@ bool User::verifySignature(const std::string &message, const std::string &signat
 
     return false;
 }
+
+void User::sendMessage(const std::string& message) const { //eventually need this? not sure, only adding to remove errors for now.
+    // Implementation to send a message to the user
+    // This could involve using the WebSocket connection handle (handle)
+    // to send the message through the WebSocket connection.
+    // For example:
+    // server.send(handle, message, websocketpp::frame::opcode::text);
+}

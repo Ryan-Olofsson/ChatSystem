@@ -32,6 +32,9 @@ public:
     std::string signMessage(const std::string& message) const;
     bool verifySignature(const std::string& message, const std::string& signature, RSA* signerPublicKey) const;
 
+    // sending message?
+    void sendMessage(const std::string& message) const;
+
 private:
     // user attributes
     std::string name;

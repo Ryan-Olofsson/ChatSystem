@@ -12,15 +12,14 @@
 using namespace std;
 using json = nlohmann::json;
 
-
 // server constructor
 Server::Server(const std::string& address, int port) : address(address), port(port), neighbourhood(nullptr) {
     
     // initialise server
     server.init_asio(); // asio server init
-    server.set_message_handler(bind(&Server::onMessage, this, ::_1, ::_2)); // set message handler
-    server.set_open_handler(bind(&Server::onOpen, this, ::_1)); // set open handler
-    server.set_close_handler(bind(&Server::onClose, this, ::_1)); // set close handler
+    server.set_message_handler(bind(&Server::onMessage, this, std::placeholders::_1, std::placeholders::_2)); // set message handler
+    server.set_open_handler(bind(&Server::onOpen, this, std::placeholders::_1)); // set open handler
+    server.set_close_handler(bind(&Server::onClose, this, std::placeholders::_1)); // set close handler
 
     // set up server endpoint
     server.set_reuse_addr(true); // allow server to reuse address
@@ -37,7 +36,7 @@ Server::~Server() {
     /* this is for when the server is destroyed. */
 
     // stop server if running
-    stop();
+    stopServer();
 
     // clean up connected clients
     for (auto& client : connectedClients) {
