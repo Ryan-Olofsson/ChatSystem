@@ -297,6 +297,15 @@ std::string Server::decryptMessage(const std::string& encryptedMessage, const st
 
 void Server::updateConnectedClients(const std::string& fingerprint, bool isConnected) {
     // todo: implement updating connected clients list
+    if (isConnected) {
+        // add the client to the connected clients
+        User* user = new User(fingerprint); // assuming user can be created with just fingerprint 
+        addConnectedClient(fingerprint, user);
+    } else {
+        // remove the client from the connected clients
+        removeConnectedClient(fingerprint);
+    }
+    sendClientUpdate(); // send a client update to other servers
 }
 
 std::string Server::getAddress() const {
