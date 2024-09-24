@@ -106,15 +106,29 @@ bool Server::isRunning() const {
 }
 
 void Server::setNeighbourhood(Neighbourhood* neighbourhood) {
-    this->neighbourhood = neighbourhood;
+
     // set the neighbourhood
+    this->neighbourhood = neighbourhood;
 
 }
 
-void Server::addConnectedClient(const std::string& fingerprint, User* user) {
-    connectedClients[fingerprint] = user;
+// The original code did not check if the user is already connected before adding them to the connected clients map.
+// This could lead to unexpected behavior if a user is already connected and their connection is overwritten.
+// To fix this, we will add a check to ensure the user is not already connected before adding them to the map.
 
-    // add a connected client
+void Server::addConnectedClient(const std::string& fingerprint, User* user) {
+
+    // the original code doesnt check if the user is already 
+    // connected before adding them to the connected clients map.
+    // this could cause overwriting of existing connections.
+    // connectedClients[fingerprint] = user;
+
+    // adding a check to prevent overwriting existing connections
+    if (connectedClients.find(fingerprint) == connectedClients.end()) {
+        connectedClients[fingerprint] = user;
+    } else {
+        std::cerr << "User with fingerprint " << fingerprint << " is already connected." << std::endl;
+    }
 
 }
 
@@ -132,6 +146,13 @@ void Server::onOpen(websocketpp::connection_hdl hdl) {
     // this'll handle the connection open
     // e.g. add the client to connectedClients
     // and log the connection
+    User* user = findUserByHandle(hdl); // find the user associated with the handle
+    if (user) { // if the user is found
+        addConnectedClient(user->getFingerprint(), user); // add the user to the connected clients
+        std::cout << "New connection opened for user: " << user->getFingerprint() << std::endl; // log the connection
+    } else {
+        std::cout << "Failed to find user for handle: " << hdl.lock().get() << std::endl; // log the failure to find user
+    }
 
 }   
 
@@ -140,7 +161,14 @@ void Server::onClose(websocketpp::connection_hdl hdl) {
     // this'll handle the connection closure
     // e.g. remove the client from connectedClients
     // and log the disconnection
-
+    
+    User* user = findUserByHandle(hdl); // find the user associated with the handle
+    if (user) { // if the user is found
+        removeConnectedClient(user->getFingerprint()); // remove the user from the connected clients
+        std::cout << "Connection closed for user: " << user->getFingerprint() << std::endl; // log the disconnection
+    } else {
+        std::cout << "Failed to find user for handle: " << hdl.lock().get() << std::endl; // log the failure to find user
+    }
 }
 
 void Server::onMessage(websocketpp::connection_hdl hdl, websocketpp::server<websocketpp::config::asio>::message_ptr msg) {
@@ -158,7 +186,9 @@ void Server::relayMessage(const std::string& message, const std::string& destina
 void Server::broadcastToClients(const std::string& message) {
 
     // broadcast message to all connected clients
-
+    for (const auto& client : connectedClients) {
+        client.second->sendMessage(message);
+    }
 }
 
 User* Server::findUserByHandle(websocketpp::connection_hdl hdl) {    // find and return the User associated with the given connection handle
