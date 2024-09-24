@@ -51,7 +51,7 @@
 #include "external_libs/openssl/include/openssl/sha.h"
 
 // WEBSOCKETS LIBRARIES
-#include <boost/boost/hof/version.hpp>
+#include <boost/hof/version.hpp>
 #include "external_libs/websocketpp/websocketpp/config/asio_no_tls.hpp"
 #include "external_libs/websocketpp/websocketpp/server.hpp"
 

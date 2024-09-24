@@ -299,15 +299,6 @@ std::string User::decryptMessage(const std::string &encryptedMessage, RSA* priva
 //     return std::string(reinterpret_cast<char*>(signature.data()), sigLen);
 // }
 
-
-
-
-
-
-
-
-
-
 std::string User::signMessage(const std::string &message) const {
     // Create a new EVP_MD_CTX for the signing operation
     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
@@ -380,19 +371,6 @@ std::string User::signMessage(const std::string &message) const {
     return std::string(reinterpret_cast<char*>(signature.data()), sigLen);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 bool User::verifySignature(const std::string &message, const std::string &signature, RSA* signerPublicKey) const {
     // todo: implement verifysignature
 
@@ -421,7 +399,7 @@ bool User::verifySignature(const std::string &message, const std::string &signat
 
     // Initialize the verification operation with the public key and SHA-256
     EVP_PKEY_CTX* pkey_ctx;
-    if (EVP_DigestVerifyInit(ctx, &pkey_ctx, EVP_sha256(), nullptr, signerPublicKey) != 1) {
+    if (EVP_DigestVerifyInit(ctx, &pkey_ctx, EVP_sha256(), nullptr, evp_pkey) != 1) {
 
         EVP_MD_CTX_free(ctx);
         throw std::runtime_error("Failed to initialize verification operation");
@@ -450,14 +428,6 @@ bool User::verifySignature(const std::string &message, const std::string &signat
 
     return result;
 }
-
-
-
-
-
-
-
-
 
 void User::sendMessage(const std::string& message) const { //eventually need this? not sure, only adding to remove errors for now.
     // Implementation to send a message to the user
