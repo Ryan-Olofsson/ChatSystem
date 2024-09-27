@@ -38,8 +38,9 @@ public:
     void handleChatMessage(websocketpp::connection_hdl hdl, const std::string& message);
     void handlePublicChatMessage(websocketpp::connection_hdl hdl, const std::string& message);
     void handleClientListRequest(websocketpp::connection_hdl hdl);
-    void sendClientUpdate();
-    void handleClientUpdateRequest(const std::string& serverAddress);
+    void sendClientList();
+    void sendClientUpdateRequest(const std::string& serverAddress);
+    void Server::sendClientUpdate();
     
     // File transfer methods
     std::string handleFileUpload(const std::string& fileData);
@@ -55,6 +56,12 @@ public:
 
     // additional methods for Neighbourhood
     std::string getAddress() const;
+
+    // broadcast message to all servers in the neighbourhood
+    void broadcastToServers(const std::string& message);
+
+    // some more methods for server info
+    std::vector<ServerInfo> gatherClientInfo();
 
 private:
 
@@ -77,6 +84,7 @@ private:
 
     // HTTP server
     httplib::Server httpServer; 
+    
 };
 
 #endif

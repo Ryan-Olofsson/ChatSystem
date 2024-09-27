@@ -174,9 +174,19 @@ void Server::onMessage(websocketpp::connection_hdl hdl, websocketpp::server<webs
 }
 
 void Server::relayMessage(const std::string& message, const std::string& destinationServer) {
-
     // relay message to another server
+    httplib::Client client(destinationServer.c_str());
+    httplib::Headers headers = {
+        { "Content-Type", "application/json" }
+    };
 
+    auto res = client.Post("/api/relay", headers, message, "application/json");
+
+    if (res && res->status == 200) {
+        std::cout << "Message relayed successfully to " << destinationServer << std::endl;
+    } else {
+        std::cerr << "Failed to relay message to " << destinationServer << std::endl;
+    }
 }
 
 void Server::broadcastToClients(const std::string& message) {
@@ -199,13 +209,13 @@ User* Server::findUserByHandle(websocketpp::connection_hdl hdl) {    // find and
 
 /* FYI i added new methods to handle different types of messages and requests */
 
-void Server::handleHelloMessage(websocketpp::connection_hdl hdl, const std::string& message) {
+void Server::handleHelloMessage(websocketpp::connection_hdl hdl, const std::string& message) { // this wont work with current implementation
     // todo: implement hello message handling
     json msg = json::parse(message); // parse the message
     string publicKey = msg["public_key"]; // get the public key
     User* user = new User(publicKey); // create a new user
     addConnectedClient(user->getFingerprint(), user); // add the user to the connected clients
-    sendClientUpdate(); // send a client update (not sure if need to do this)
+    sendClientList(); // send a client update (not sure if need to do this)
 }
 
 void Server::handleChatMessage(websocketpp::connection_hdl hdl, const std::string& message) {
@@ -225,39 +235,108 @@ void Server::handleChatMessage(websocketpp::connection_hdl hdl, const std::strin
 
 void Server::handlePublicChatMessage(websocketpp::connection_hdl hdl, const std::string& message) {
     // todo: implement public chat message handling
+    json msg;
+    try {
+        msg = json::parse(message);
+    } catch (const json::parse_error& e) {
+        std::cerr << "JSON parse error: " << e.what() << std::endl;
+        return; // Early exit on parse error
+    }
+
+    // Check if the message is a public chat message
+    if (msg["type"] != "public_chat") {
+        std::cerr << "Received message is not a public chat message." << std::endl;
+        return; // Early exit if the message type is incorrect
+    }
+
+    std::string senderFingerprint = msg["sender"];
+    std::string chatMessage = msg["message"];
+
+    // Log the public chat message
+    std::cout << "Public chat from " << senderFingerprint << ": " << chatMessage << std::endl;
+
+    // Broadcast to all clients
+    broadcastToClients(message);
+
+
+
+    // json msg = json::parse(message);
+    // std::string senderFingerprint = msg["sender"];
+    // std::string chatMessage = msg["message"];
+
+    // json publicChatMsg = publicChat(senderFingerprint, chatMessage);
+
+    // broadcastToClients(publicChatMsg.dump());
+
+    // User* user = findUserByHandle(hdl);
+    // if (user) {
+    //     broadcastToServers(publicChatMsg.dump());
+    // }
+
+    // if (isClient(hdl)) {
+    //     broadcastToServers(publicChatMsg.dump());
+    // }
+    // below could be logic if above function doesnt work.
+    // for (const auto& server : neighbourhood->getServers()) {
+    //     if (server->getAddress() != this->getAddress()) {
+    //         relayMessage(publicChatMsg.dump(), server->getAddress());
+    //     }
+    // }
 }
 
-void Server::handleClientListRequest(websocketpp::connection_hdl hdl) {
-    // todo: implement client list request handling
+std::vector<ServerInfo> Server::gatherClientInfo() {
     std::vector<ServerInfo> serverInfos;
     for (const auto& server : neighbourhood->getServers()) {
         ServerInfo info;
         info.address = server->getAddress();
-
         for (const auto& client : server->getConnectedClients()) {
-            info.clients.push_back(client.first);
+            info.clients.push_back(client.first); // assuming client.first is the public key NEED TO VERIFY
         }
         serverInfos.push_back(info);
     }
-
-    json clientList = createClientList(serverInfos);
-    server.send(hdl, clientList.dump(), websocketpp::frame::opcode::text);
+    return serverInfos;
 }
 
-void Server::sendClientUpdate() {
+void Server::handleClientListRequest(websocketpp::connection_hdl hdl) { // request sent by client, to get the list of clients online connected to a server
+    // todo: implement client list request handling
+    sendClientList(); // still needs implementation and tracking of people sending online/hello i think?
+}
+//     std::vector<std::string> clients;
+//     for (const auto& client : connectedClients) {
+//         clients.push_back(client.first);
+//     }
+//     json clientUpdate = createClientUpdate(clients);
+//     broadcastToClients(clientUpdate.dump());
+// }
+//     // auto serverInfos = gatherClientInfo();
+//     // json clientList = createClientList(serverInfos);
+//     // broadcastToServers(clientList.dump());
+//     // server.send(hdl, clientList.dump(), websocketpp::frame::opcode::text); // this would be used if we had to send it to the clients.
+//     // }
+
+void Server::sendClientList() { // update send by server letting clients know who has disconnected
+    // todo: this updates our own clients i guess
     std::vector<std::string> clients;
     for (const auto& client : connectedClients) {
         clients.push_back(client.first);
     }
     json clientUpdate = createClientUpdate(clients);
     broadcastToClients(clientUpdate.dump());
-    // todo: implement sending client updates to other servers
 }
 
-void Server::handleClientUpdateRequest(const std::string& serverAddress) {
-    // todo: implement handling client update requests from other servers
+void Server::sendClientUpdateRequest(const std::string& serverAddress) {
+    // todo: this will send a client update request to a server
     json clientUpdateRequest = createClientUpdateRequest();
     relayMessage(clientUpdateRequest.dump(), serverAddress);
+}
+
+void Server::sendClientUpdate() { // needs further implementation to basically work as we dont have client disconnects being tracked at the moment.
+    std::vector<std::string> clients;
+    for (const auto& client : connectedClients) {
+        clients.push_back(client.first); // Assuming client.first is the public key
+    }
+    json clientUpdate = createClientUpdate(clients); // Create the client update message
+    broadcastToServers(clientUpdate.dump()); // Send the update to all other servers
 }
 
 
@@ -304,6 +383,14 @@ void Server::startHTTPServer() {
         }
     });
 
+    // relay endpoint
+    httpServer.Post("/api/relay", [this](const httplib::Request& req, httplib::Response& res) {
+        std::string message = req.body;
+        // broadcast message to all clients
+        broadcastToClients(message);
+        res.set_content("message relayed", "text/plain");
+    });
+
     httpServer.listen("0.0.0.0", 8080);
 }
 
@@ -321,19 +408,38 @@ std::string Server::decryptMessage(const std::string& encryptedMessage, const st
     return "";
 }
 
-void Server::updateConnectedClients(const std::string& fingerprint, bool isConnected) {
-    // todo: implement updating connected clients list
-    if (isConnected) {
-        // add the client to the connected clients
-        User* user = new User(fingerprint); // assuming user can be created with just fingerprint 
-        addConnectedClient(fingerprint, user);
-    } else {
-        // remove the client from the connected clients
-        removeConnectedClient(fingerprint);
-    }
-    sendClientUpdate(); // send a client update to other servers
-}
+// void Server::updateConnectedClients(const std::string& fingerprint, bool isConnected) {
+//     // todo: implement updating connected clients list
+//     if (isConnected) {
+//         removeConnectedClient(fingerprint);
+//     } else {
+//         addConnectedClient(fingerprint);
+//     }
+//     for (const auto& client : connectedClients) {
+//         if (isConnected) {
+//             // add the client to the connected clients
+//             if (fingerprint != client.first) {
+//                 User* user = new User(fingerprint); // assuming user can be created with just fingerprint 
+//                 addConnectedClient(fingerprint, user);
+//             } else {
+//                 break;
+//             }
+//         } else {
+//             // remove the client from the connected clients
+//             removeConnectedClient(fingerprint);
+//         }
+//     }
+//     sendClientUpdate(); // send a client update to other servers
+// }
 
 std::string Server::getAddress() const {
     return address; // Return the address of the server
+}
+
+void Server::broadcastToServers(const std::string& message) {
+    for (const auto& server : neighbourhood->getServers()) {
+        if (server->getAddress() != this->getAddress()) {
+            relayMessage(message, server->getAddress());
+        }
+    }
 }
