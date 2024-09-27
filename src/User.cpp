@@ -170,15 +170,20 @@ std::string User::encryptMessage(const std::string &message, RSA* publicKey) con
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, aesKey, iv) != 1 ||
 
         // Encrypts message and the output is placed in ciphertext with len being the number of bytes encrypted
-        EVP_EncryptUpdate(ctx, ciphertext.data(), &len, reinterpret_cast<const unsigned char*>(message.data()), message.size()) != 1 ||
-
-        // Finalizes the encryption process and adds the authentication tag to the ciphertext
-        EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len) != 1) {
+        EVP_EncryptUpdate(ctx, ciphertext.data(), &len, reinterpret_cast<const unsigned char*>(message.data()), message.size()) != 1) {
 
         EVP_CIPHER_CTX_free(ctx);
         throw std::runtime_error("Failed to encrypt message with AES-GCM");
     }
-    ciphertext_len = len;
+
+    int tag_len;
+    std::vector<unsigned char> tag(16);
+    if (EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &tag_len) != 1 ||
+        EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize encryption or get tag");
+    }
+    ciphertext_len = len + tag_len;
 
     // Encrypt the AES key using the RSA public key, stores result in encryptedKey
     std::vector<unsigned char> encryptedKey(RSA_size(publicKey));
@@ -195,17 +200,18 @@ std::string User::encryptMessage(const std::string &message, RSA* publicKey) con
     result.append(reinterpret_cast<char*>(iv), sizeof(iv));
     result.append(reinterpret_cast<char*>(encryptedKey.data()), encryptedKey.size());
     result.append(reinterpret_cast<char*>(ciphertext.data()), ciphertext_len);
+    result.append(reinterpret_cast<char*>(tag.data()), tag.size());
+
 
     return result;
 }
 
 std::string User::decryptMessage(const std::string &encryptedMessage, RSA* privateKey) const {
-    // todo: implement decryptmessage
-
     // Extract the IV, encrypted AES key, and ciphertext from the encrypted message
     const unsigned char* iv = reinterpret_cast<const unsigned char*>(encryptedMessage.data());
     const unsigned char* encryptedKey = iv + 16;
     const unsigned char* ciphertext = encryptedKey + RSA_size(privateKey);
+    const unsigned char* tag = reinterpret_cast<const unsigned char*>(encryptedMessage.data() + encryptedMessage.size() - 16);
 
     // Decrypt the encryptedKey using the RSA private key, stores result in aesKey
     unsigned char aesKey[32];
@@ -219,23 +225,36 @@ std::string User::decryptMessage(const std::string &encryptedMessage, RSA* priva
         throw std::runtime_error("Failed to create EVP_CIPHER_CTX");
     }
 
-    // Define length variables and plaintext vector with a size equal to encryptedKey
+    // Define length variables and plaintext vector
     int len, plaintext_len;
-    std::vector<unsigned char> plaintext(encryptedMessage.size() - 16 - RSA_size(privateKey));
+    size_t ciphertext_len = encryptedMessage.size() - 16 - RSA_size(privateKey) - 16; // IV, encryptedKey, tag
+    std::vector<unsigned char> plaintext(ciphertext_len);
 
     // Initialize decryption operation with AES-256-GCM and the key and IV
-    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, aesKey, iv) != 1 ||
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, aesKey, iv) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to initialize decryption");
+    }
 
-        // Decrypts ciphertext and the output is placed in plaintext with len being the number of bytes decrypted
-        EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext, encryptedMessage.size() - 16 - RSA_size(privateKey)) != 1 ||
-
-        // Finalizes the decryption process and extracts the authentication tag from the ciphertext
-        EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len) != 1) {
-
+    // Decrypts ciphertext and the output is placed in plaintext
+    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext, ciphertext_len) != 1) {
         EVP_CIPHER_CTX_free(ctx);
         throw std::runtime_error("Failed to decrypt message with AES-GCM");
     }
     plaintext_len = len;
+
+    // Set the tag before finalizing decryption
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, const_cast<unsigned char*>(tag)) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to set GCM tag");
+    }
+
+    // Finalize the decryption
+    if (EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        throw std::runtime_error("Failed to finalize decryption with AES-GCM");
+    }
+    plaintext_len += len;
 
     // Free the EVP_CIPHER_CTX
     EVP_CIPHER_CTX_free(ctx);
@@ -243,61 +262,6 @@ std::string User::decryptMessage(const std::string &encryptedMessage, RSA* priva
     // Convert the plaintext to a string and return it
     return std::string(reinterpret_cast<char*>(plaintext.data()), plaintext_len);
 }
-
-// std::string User::signMessage(const std::string &message) const {
-//     // todo: implement signmessage
-
-//     // Create a new EVP_MD_CTX for the signing operation
-//     EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-//     if (!ctx) {
-//         throw std::runtime_error("Failed to create EVP_MD_CTX");
-//     }
-
-//     // Initialize the signing operation with the private key and SHA-256
-//     EVP_PKEY_CTX* pkey_ctx;
-//     if (EVP_DigestSignInit(ctx, &pkey_ctx, EVP_sha256(), nullptr, privateKey) != 1) {
-
-//         EVP_MD_CTX_free(ctx);
-//         throw std::runtime_error("Failed to initialize signing operation");
-//     }
-
-//     // Set the RSA-PSS padding scheme with a salt length of 32 bytes
-//     if (EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, RSA_PKCS1_PSS_PADDING) != 1 ||
-//         EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, 32) != 1) {
-
-//         EVP_MD_CTX_free(ctx);
-//         throw std::runtime_error("Failed to set RSA-PSS padding");
-//     }
-
-//     // Hashes the message and adds it to the signing operation
-//     if (EVP_DigestSignUpdate(ctx, message.data(), message.size()) != 1) {
-//         EVP_MD_CTX_free(ctx);
-//         throw std::runtime_error("Failed to update signing operation");
-//     }
-
-//     // Determine the size of the signature
-//     size_t sigLen;
-//     if (EVP_DigestSignFinal(ctx, nullptr, &sigLen) != 1) {
-
-//         EVP_MD_CTX_free(ctx);
-//         throw std::runtime_error("Failed to finalize signing operation");
-//     }
-
-//     // Allocate memory for the signature
-//     std::vector<unsigned char> signature(sigLen);
-
-//     // Finalize the signing operation to get the actual signature
-//     if (EVP_DigestSignFinal(ctx, signature.data(), &sigLen) != 1) {
-//         EVP_MD_CTX_free(ctx);
-//         throw std::runtime_error("Failed to finalize signing operation");
-//     }
-
-//     // Free the EVP_MD_CTX
-//     EVP_MD_CTX_free(ctx);
-
-//     // Convert the signature to a string and return it
-//     return std::string(reinterpret_cast<char*>(signature.data()), sigLen);
-// }
 
 std::string User::signMessage(const std::string &message) const {
     // Create a new EVP_MD_CTX for the signing operation
