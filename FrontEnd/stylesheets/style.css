@@ -1,0 +1,80 @@
+#container {
+    padding: 50px 0px 00px 0px;
+    background-color: white;
+    max-width: 60%;
+}
+
+#title {
+    color: white;
+    padding: 10px;
+    background-color: black;
+    border-radius: 15px;
+    text-align: center;
+}
+
+#chatWindow {
+    border: 1px solid black;
+    border-radius: 15px;
+    padding: 10px;
+    max-height: 650px;
+    overflow-y: scroll;
+}
+
+#margin {
+    margin-bottom: 20px;
+}
+
+#styledList {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#styledList li {
+    padding: 10px 0px 10px 20px;
+    border-bottom: 1px solid lightgrey  ;
+}
+
+#sendMessage {
+    margin: 0px 0px 0px 3px;
+    background-color: black;
+    color: white;
+    border-radius: 15px;
+}
+
+#uploadFiles {
+    margin: 0px 3px 0px 3px;
+    background-color: black;
+    color: white;
+    border-radius: 15px;
+}
+
+#sendMessageForm {
+    margin: 0px 3px 0px 0px;
+    border: 1px solid black;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+#dropdownOnlineUsers {
+    background-color: black;
+    color: white;
+    border-radius: 15px;
+    margin-bottom: 10px;
+}
+
+#groupChat {
+    background-color: black;
+    color: white;
+    border-radius: 15px;
+    margin-bottom: 10px;
+}
+
+#selectedChat {
+    color: black;
+    padding: 10px;
+    background-color: white;
+    border-radius: 15px;
+    border: 1px solid black;
+    text-align: center;
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>OLAF's Neighbourhood Protocol</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <link rel="stylesheet" href="./stylesheets/style.css">
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" defer></script>
+        <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js" defer></script>
+        <script src="./javascript/chatpage.js" defer></script>
+    </head>
+    <body>
+        <div id="container" class="container-fluid vh-100 d-flex flex-column">
+            <h2 id="title">OLAF's Neighbourhood Protocol</h2>
+            <div class="row">
+                <!-- Dropdown List Users Online and option for group chat message to all users online-->
+                <!-- When user selected person messaging to also changes and retreive chat history in current connection -->
+                 <div class="dropdown col-6">
+                    <button id="dropdownOnlineUsers" class="btn btn-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Users Online
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="dropdownOnlineUsers">
+                        <!-- Currently Hard Coded, need to retreive online users through javascript -->
+                        <li><a class="dropdown-item" href="#">User 1</a></li>
+                        <li><a class="dropdown-item" href="#">User 2</a></li>
+                        <li><a class="dropdown-item" href="#">User 3</a></li>
+                    </ul>
+                 </div>
+                 <div class="col-6">
+                    <button id="groupChat" class="btn btn-primary w-100" type="submit">
+                        Chat in Group
+                    </button>
+                 </div>
+            </div>
+            <h5 id="selectedChat">Talking to: None</h5>
+            <div id="chatWindowStyle" class="flex-grow-1 d-flex flex-column">
+                <div id="chatWindow" class="flex-grow-1 mb-2">
+                    <div class="row flex-grow-1 overflow-auto">
+                        <!-- List of Chat History -->
+                         <ul id="styledList">
+                            <!-- Hard coded messages for testing -->
+                            <li>Test message 1</li>
+                            <li>Test message 2</li>
+                            <li>Test message 3</li>
+                            <li>Test message 4</li>
+                            <li>Test message 5</li>
+                            <li>Test message 6</li>
+                            <li>Test message 7</li>
+                            <li>Test message 8</li>
+                            <li>Test message 9</li>
+                            <li>Test message 10</li>
+                            <li>Test message 11</li>
+                            <li>Test message 12</li>
+                            <li>Test message 13</li>
+                            <li>Test message 14</li>
+                            <li>Test message 15</li>
+                            <li>Test message 16</li>
+                            <li>Test message 17</li>
+                            <li>Test message 18</li>
+                            <li>Test message 19</li>
+                            <li>Test message 20</li>
+                         </ul>
+                    </div>
+                </div>
+                <form id="margin" class="d-flex">
+                    <input id="sendMessageForm" type="text" class="form-control" placeholder="Send message here..." v-model="Message" autocomplete="off">
+                    <button id="uploadFiles" class="btn btn-primary" type="submit">
+                        +
+                    </button>
+                    <button id="sendMessage" class="btn btn-primary" type="submit">
+                        Send
+                    </button>
+                </form>
+            </div>        
+        </div>
+    </body>
+</html>
