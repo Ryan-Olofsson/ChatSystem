@@ -57,8 +57,32 @@ def handle_chat(message):
     }, broadcast=True)
     return jsonify({"status": "Chat message forwarded successfully"}), 200
 
-def handle_client_list_request(message):
-    return jsonify({"status": "Client list request recieved and processed"}), 200
+def handle_client_list_request(message): # not sure if this is right
+    client_list = create_client_list(connected_clients)
+    return jsonify(client_list), 200
 
-def handle_client_update_request(message):
-    return jsonify({"status": "Client update request recieved and processed"}), 200
+def handle_client_update_request(message): # not sure if this is right 
+    client_update = create_client_update(connected_clients)
+    SocketIO.emit('client_update', client_update, broadcast=True)
+    return jsonify({"status": "Client update sent to all servers"}), 200
+
+def create_client_list(servers): # not sure if this is right
+    client_list = {
+        "type": "client_list",
+        "servers": []
+    }
+    
+    for server in servers:
+        server_info = {
+            "address": server.address,
+            "clients": [client for client in server.clients]
+        }
+        client_list["servers"].append(server_info)
+    
+    return client_list
+
+def create_client_update(clients): # not sure if this is right
+    return {
+        "type": "client_update",
+        "clients": list(clients.values())
+    }
