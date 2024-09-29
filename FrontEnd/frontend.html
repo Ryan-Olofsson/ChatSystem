@@ -19,17 +19,16 @@
             <div class="row">
                 <!-- Dropdown List Users Online and option for group chat message to all users online-->
                 <!-- When user selected person messaging to also changes and retreive chat history in current connection -->
-                 <div class="dropdown col-6">
+                <div class="dropdown col-6">
                     <button id="dropdownOnlineUsers" class="btn btn-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         Users Online
                     </button>
-                    <ul class="dropdown-menu w-100" aria-labelledby="dropdownOnlineUsers">
-                        <!-- Currently Hard Coded, need to retreive online users through javascript -->
-                        <li><a class="dropdown-item" href="#">User 1</a></li>
-                        <li><a class="dropdown-item" href="#">User 2</a></li>
-                        <li><a class="dropdown-item" href="#">User 3</a></li>
+                    <ul class="dropdown-menu w-100" aria-labelledby="dropdownOnlineUsers" id="userList">
+                        <li><a class="dropdown-item" href="#" onclick="selectUser(this)">User 1</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="selectUser(this)">User 2</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="selectUser(this)">User 3</a></li>
                     </ul>
-                 </div>
+                </div>
                  <div class="col-6">
                     <button id="groupChat" class="btn btn-primary w-100" type="submit">
                         Chat in Group
