@@ -3,6 +3,7 @@ from flask_socketio import socketio
 from pyjson import create_client_list, create_client_update
 from fileSharing import upload_file, retrieve_file
 from serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request
+from client import Client
 
 main = Blueprint('main', __name__)
 
@@ -59,3 +60,13 @@ def download():
         return jsonify({"status": "File downloaded successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@main.route('/initialize_user', methods=['POST'])
+def initialize_user():
+    username = request.json.get('username')
+    if username:
+        user_instance = Client(username)
+        public_key = user_instance.crypto.public_key
+        return jsonify({"public_key": public_key, "username": username}), 200
+    else:
+        return jsonify({"error": "Username is required"}), 400
