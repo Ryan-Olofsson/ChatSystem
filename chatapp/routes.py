@@ -2,8 +2,9 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_socketio import socketio
 from pyjson import create_client_list, create_client_update
 from fileSharing import upload_file, retrieve_file
-from serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request
+from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request
 from client import Client
+from cryptography.hazmat.primitives import serialization 
 
 main = Blueprint('main', __name__)
 
@@ -66,7 +67,7 @@ def initialize_user():
     username = request.json.get('username')
     if username:
         user_instance = Client(username)
-        public_key = user_instance.crypto.public_key
+        public_key = user_instance.crypto.export_public_key().decode('utf-8')  # Assuming this method exists
         return jsonify({"public_key": public_key, "username": username}), 200
     else:
         return jsonify({"error": "Username is required"}), 400

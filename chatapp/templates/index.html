@@ -61,7 +61,12 @@
         socket.connect();
         socket.on("connect", () => {
             initializeUser();
+            // const data = await initializeUser();
+            // const username = data[0];
+            // const public_key = data[1];
+            // socket.emit("addUser", {username, public_key});
         });
+    
 
         // Send messages to the server to be broadcasted to all clients
         // Need to write conditional functionality that encrypts the message based on the public key of the selected recipient

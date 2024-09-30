@@ -2,23 +2,25 @@ from flask_socketio import emit
 from flask import request
 
 from .extensions import socketio
-
+from crypto import Crypto
 # in this file, add all events to the socketio object
 connected_users = {}
+Crypto = Crypto()
 # connection event
 @socketio.on("connect")
 def handle_connect():
-    username = request.json.get('username')
-    connected_users[username] = request.sid
-    print(f"{username} connected")
+    print("Client connected")
 
 # disconnection event
 @socketio.on("disconnect")
 def handle_disconnect():
-    username = next((user for user, sid in connected_users.items() if sid == request.sid), None)
+    print("Client disconnected")
+    username = next((user for user, info in connected_users.items() if info['sid'] == request.sid), None)
     if username:
         del connected_users[username]
         print(f"{username} disconnected")
+        print(connected_users)
+
 
 @socketio.on("onJoin")
 def handle_on_join(message):
@@ -29,6 +31,23 @@ def handle_send_message(message):
     print(message)
     # Broadcast the message to all clients
     emit("chat", {"message": message}, broadcast=True) 
+
+
+@socketio.on("addUser")
+def handle_add_user(message):
+    username = message.get('username')
+    print(username)
+    if isinstance(username, str) and username:  # Check if username is a valid string
+        fingerprint = Crypto.calculate_fingerprint()
+        public_key = message.get('public_key')
+        connected_users[username] = {
+            "sid": request.sid,
+            "fingerprint": fingerprint,
+            "public_key": public_key
+        }
+    print(f"{username} connected with sid {request.sid}")
+    print(connected_users)
+
 
 #@SocketIO.on('disconnect')
 #def handle_disconnect():

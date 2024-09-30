@@ -1,6 +1,9 @@
+const socket = io(); 
+
 export async function initializeUser() {
     const username = prompt("Please enter your username:");
     if (username) {
+        console.log("username", username);
         const response = await fetch('/initialize_user', {
             method: 'POST',
             headers: {
@@ -11,6 +14,7 @@ export async function initializeUser() {
         const data = await response.json();
         if (response.ok) {
             const public_key = data.public_key;
+            socket.emit("addUser", {username, public_key});
             console.log("Public Key:", public_key);
             await sendHelloMessage(public_key);
         } else {
