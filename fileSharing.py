@@ -1,8 +1,16 @@
 import requests
+import os
 
 def upload_file(server_url, file_path):
     """Uploads a file to the server."""
-    # Use a context manager to ensure the file is closed after uploading
+
+    max_file_size = 5 * 1024 * 1024  #  5 MB limit
+    file_size = os.path.getsize(file_path)
+
+    if file_size > max_file_size:
+        print("Error: File size too large.")
+        return None
+
     with open(file_path, 'rb') as file:
         response = requests.post(f"{server_url}/api/upload", files={'file': file})
     
