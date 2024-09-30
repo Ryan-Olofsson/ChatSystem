@@ -3,6 +3,7 @@ import base64
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO
 from crypto import calculate_fingerprint
+from pyjson import create_client_list, create_client_update
 
 app = Flask(__name__)
 
@@ -12,7 +13,6 @@ connected_clients = []
 def handle_message():
     message = request.json
     message_type = message.get('type')
-
     if message_type == 'hello':
         return handle_hello(message)
     elif message_type == 'chat':
@@ -22,14 +22,24 @@ def handle_message():
     elif message_type == 'client_update_request':
         return handle_client_update_request(message)
     elif message_type == 'client_list_request':
-        return handle_client_list_request(message)
+        return handle_client_list_request()
     else:
         return jsonify({"error": "Unknown message type"}), 400
+
+@SocketIO.on('disconnect')
+def handle_disconnect():
+    # need a way to identify fingerprint of client that disconnected., storing it somewhere for use
+    #fingerprint = x
+    # if fingerprint in connected_clients:
+        # del connected_clients[fingerprint]
+        #SocketIO.emit('client_update', create_client_update(connected_clients), broadcast=True)
+    return jsonify({"status": "Client disconnected"}), 200
 
 def handle_hello(message):
     public_key = message['data']['public_key']
     fingerprint = calculate_fingerprint(public_key)
     connected_clients[fingerprint] = public_key
+    SocketIO.emit('client_update', create_client_update(connected_clients), broadcast=True)
     return jsonify({"status": "Hello message recieved", "fingerprint": fingerprint})
 
 def handle_public_chat(message):
@@ -57,32 +67,12 @@ def handle_chat(message):
     }, broadcast=True)
     return jsonify({"status": "Chat message forwarded successfully"}), 200
 
-def handle_client_list_request(message): # not sure if this is right
-    client_list = create_client_list(connected_clients)
-    return jsonify(client_list), 200
+def handle_client_list_request(): # not sure if this is right - it is not right. need to know where we track other servers so i can pass that info.
+    client_list = create_client_list(connected_clients) # need to pass servers - cant do currently
+    SocketIO.emit('client_list', client_list, broadcast=True) # this should be correctish.
+    return jsonify({"message": "Client list sent to all clients"}), 200
 
-def handle_client_update_request(message): # not sure if this is right 
+def handle_client_update_request(): # not sure if this is right 
     client_update = create_client_update(connected_clients)
     SocketIO.emit('client_update', client_update, broadcast=True)
     return jsonify({"status": "Client update sent to all servers"}), 200
-
-def create_client_list(servers): # not sure if this is right
-    client_list = {
-        "type": "client_list",
-        "servers": []
-    }
-    
-    for server in servers:
-        server_info = {
-            "address": server.address,
-            "clients": [client for client in server.clients]
-        }
-        client_list["servers"].append(server_info)
-    
-    return client_list
-
-def create_client_update(clients): # not sure if this is right
-    return {
-        "type": "client_update",
-        "clients": list(clients.values())
-    }
