@@ -84,11 +84,12 @@ class Crypto:
         iv = os.urandom(16)
         ciphertext_and_tag = aesgcm.encrypt(iv, message, None)
         
-        # Separate ciphertext and tag
-        ciphertext = ciphertext_and_tag[:-16]
-        tag = ciphertext_and_tag[-16:]
-        
-        return key, iv, ciphertext, tag
+        return key, iv, ciphertext_and_tag
+    
+    def group_symmetric_encrypt(self, chat_content, key, iv):
+        # Encrypts both the participants and message based off the key and iv of the first encryption
+        aesgcm = AESGCM(key)
+        return aesgcm.encrypt(iv, chat_content, None)
 
     def symmetric_decrypt(self, key, iv, ciphertext, tag):
         # Perform symmetric decryption using AES-GCM
@@ -97,23 +98,17 @@ class Crypto:
 
     def encrypt_message(self, message, recipient_public_key):
         # Encrypt a message using hybrid encryption (symmetric + asymmetric)
-
         # Symmetric encryption
-        sym_key, iv, encrypted_message, tag = self.symmetric_encrypt(message.encode())
+        sym_key, iv, encrypted_message = self.symmetric_encrypt(message.encode())
         
         # Asymmetric encryption of symmetric key
         encrypted_sym_key = self.asymmetric_encrypt(sym_key, recipient_public_key)
-        
-        # Sign the encrypted message and tag
-        signature = self.sign(encrypted_message + tag)
         
         # Return all necessary components for decryption and verification
         return {
             "iv": base64.b64encode(iv).decode(),
             "symm_key": base64.b64encode(encrypted_sym_key).decode(),
             "encrypted_message": base64.b64encode(encrypted_message).decode(),
-            "tag": base64.b64encode(tag).decode(),
-            "signature": base64.b64encode(signature).decode()
         }
 
     def decrypt_message(self, encrypted_data, sender_public_key):
