@@ -88,7 +88,8 @@ def create_client_list(servers):
     
     return client_list
 
-def create_client_update(clients):
+def create_client_update(connected_clients):
+    clients = list(connected_clients.values())
     client_update = {
         "type": "client_update",
         "clients": clients
