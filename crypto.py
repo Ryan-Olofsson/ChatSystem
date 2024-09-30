@@ -91,10 +91,10 @@ class Crypto:
         aesgcm = AESGCM(key)
         return aesgcm.encrypt(iv, chat_content, None)
 
-    def symmetric_decrypt(self, key, iv, ciphertext, tag):
+    def symmetric_decrypt(self, key, iv, ciphertext):
         # Perform symmetric decryption using AES-GCM
         aesgcm = AESGCM(key)
-        return aesgcm.decrypt(iv, ciphertext + tag, None)
+        return aesgcm.decrypt(iv, ciphertext, None)
 
     def encrypt_message(self, message, recipient_public_key):
         # Encrypt a message using hybrid encryption (symmetric + asymmetric)
@@ -111,25 +111,19 @@ class Crypto:
             "encrypted_message": base64.b64encode(encrypted_message).decode(),
         }
 
-    def decrypt_message(self, encrypted_data, sender_public_key):
+    def decrypt_message(self, encrypted_data):
         # Decrypt a message using hybrid encryption (symmetric + asymmetric)
 
         # Convert base64 strings back to bytes
         iv = base64.b64decode(encrypted_data["iv"])
         encrypted_sym_key = base64.b64decode(encrypted_data["symm_key"])
         encrypted_message = base64.b64decode(encrypted_data["encrypted_message"])
-        tag = base64.b64decode(encrypted_data["tag"])
-        signature = base64.b64decode(encrypted_data["signature"])
-
-        # Verify signature
-        if not self.verify(encrypted_message + tag, signature, sender_public_key):
-            raise ValueError("Invalid signature")
 
         # Decrypt symmetric key
         sym_key = self.asymmetric_decrypt(encrypted_sym_key)
 
         # Decrypt message using symmetric key
-        decrypted_message = self.symmetric_decrypt(sym_key, iv, encrypted_message, tag)
+        decrypted_message = self.symmetric_decrypt(sym_key, iv, encrypted_message)
 
         # Return the decrypted message
         return decrypted_message.decode()
