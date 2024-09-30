@@ -24,3 +24,13 @@ def handle_send_message(message):
     # Broadcast the message to all clients
     emit("chat", {"message": message}, broadcast=True) 
 
+#@SocketIO.on('disconnect')
+#def handle_disconnect():
+    # need a way to identify fingerprint of client that disconnected., storing it somewhere for use
+    #fingerprint = x
+    # if fingerprint in connected_clients:
+        # del connected_clients[fingerprint]
+        #SocketIO.emit('client_update', create_client_update(connected_clients), broadcast=True)
+    #return jsonify({"status": "Client disconnected"}), 200 #remove this once disconnection logic works.
+
+

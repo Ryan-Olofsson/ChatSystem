@@ -55,23 +55,12 @@
             <button id="sendButton" class="btn btn-primary submit-button">Send</button> <!-- Bootstrap button -->
         </div>
     </div>
-    <script>
+    <script type="module"> import { initializeUser } from "{{ url_for('static', filename='userInitial.js') }}";
         const socket = io();
 
         socket.connect();
-
         socket.on("connect", () => {
-            // Generate public key (this is a placeholder, implement your own logic)
-            const publicKey = Math.floor(Math.random() * 1000); // Replace with actual key generation logic
-
-            // Create the JSON package
-            const message = {
-                type: "hello",
-                publicKey: publicKey
-            };
-
-            // Emit the JSON package to the server
-            socket.emit("onJoin", message); 
+            initializeUser();
         });
 
         // Send messages to the server to be broadcasted to all clients

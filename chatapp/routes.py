@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify
-from flask_socketio import SocketIO
+from flask_socketio import socketio
 from pyjson import create_client_list, create_client_update
 from fileSharing import upload_file, retrieve_file
 from serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request
@@ -12,8 +12,9 @@ def index():
 
 @main.route('/api/message', methods=['POST'])
 def handle_message():
+    print("incomming request:", request.json)
     message = request.json
-    message_type = message.get('type')
+    message_type = message['data'].get('type')
     if message_type == 'hello':
         return handle_hello(message)
     elif message_type == 'chat':
@@ -58,13 +59,3 @@ def download():
         return jsonify({"status": "File downloaded successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@SocketIO.on('disconnect')
-def handle_disconnect():
-    # need a way to identify fingerprint of client that disconnected., storing it somewhere for use
-    #fingerprint = x
-    # if fingerprint in connected_clients:
-        # del connected_clients[fingerprint]
-        #SocketIO.emit('client_update', create_client_update(connected_clients), broadcast=True)
-    return jsonify({"status": "Client disconnected"}), 200 #remove this once disconnection logic works.
-

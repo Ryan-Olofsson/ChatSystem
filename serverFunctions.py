@@ -2,7 +2,7 @@ import json
 import base64
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO
-from crypto import calculate_fingerprint
+from crypto import Crypto
 from pyjson import create_client_list, create_client_update
 from fileSharing import upload_file, retrieve_file
 
@@ -22,7 +22,7 @@ def is_valid_chat_data(chat_data):
 
 def handle_hello(message):
     public_key = message['data']['public_key']
-    fingerprint = calculate_fingerprint(public_key)
+    fingerprint = Crypto.calculate_fingerprint(public_key)
     connected_clients[fingerprint] = public_key
     SocketIO.emit('client_update', create_client_update(connected_clients), broadcast=True)
     return jsonify({"status": "Hello message recieved", "fingerprint": fingerprint})
