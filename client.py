@@ -1,12 +1,15 @@
 import json
 import base64
-import websocket
 import requests
 from crypto import Crypto
+
+# Need to include server class for connected clients
+import serverFunctions
 
 
 
 # WBESOCKET LOGIC IS PURELY FOR PLACEHOLDER PURPOSES
+# Most of these functions probably dont work, need to find a way to send the messages via websocket
 
 
 
@@ -18,14 +21,7 @@ class Client:
         self.crypto = Crypto()
         self.fingerprint = self.crypto.calculate_fingerprint()
         self.counter = 0
-        self.ws = None
         self.received_counters = {}  # To track counters for each sender
-
-    # Could be a JS function
-    def connect_to_server(self):
-        # Establish WebSocket connection to the server
-        self.ws = websocket.create_connection(f"ws://{self.server_address}")
-        self.send_hello()
 
     # Could be a JS function, may need to be a signed message
     def send_hello(self):
@@ -84,7 +80,6 @@ class Client:
         chat_data = self.create_signed_message(chat_data)
         self.ws.send(json.dumps(chat_data))
 
-    # Could be a JS function, may need to be a signed message
     def send_public_chat_message(self, message):
         # Send a public chat message visible to all clients
         public_chat_message = self.create_signed_message({
@@ -138,48 +133,60 @@ class Client:
             print(f"Received unknown message type: {message['type']}")
             return
 
-        sender_public_key = self.get_public_key_for_sender(message)  # You need to implement this method
         data = message['data']
         counter = message['counter']
         signature = base64.b64decode(message['signature'])
+        sender_fingerprint = None
 
-        if not self.verify_counter(sender_public_key, counter):
-            print("Invalid counter value, possible replay attack")
+
+        if data['type'] == 'chat':
+            sender_fingerprint = self.process_chat_message(data, sender_public_key)
+        elif data['type'] == 'public_chat':
+            sender_fingerprint = data['sender']
+
+
+        sender_public_key = None
+        # Search through servers connected clients to find the public key matching the senders fingerprints
+        for client in serverFunctions.connected_clients:
+            if client['fingerprint'] == sender_fingerprint:
+                sender_public_key = client['public_key']
+
+        if sender_public_key is None:
+            print("Matching fingerprint not found at connected server")
             return
 
         if not self.crypto.verify(json.dumps(data).encode() + str(counter).encode(), signature, sender_public_key):
             print("Invalid signature")
             return
+        
+        if not self.verify_counter(sender_fingerprint, counter):
+            print("Invalid counter value, possible replay attack")
+            return
+        
+        if data['type'] == 'public_chat':
+            print(f"Received public chat message: {data['message']}")
 
-        if data['type'] == 'chat':
-            self.process_chat_message(data, sender_public_key)
-        elif data['type'] == 'public_chat':
-            self.process_public_chat_message(data)
-
-    def verify_counter(self, sender_public_key, counter):
+    def verify_counter(self, counter, sender_fingerprint):
         # Verify that the message counter is greater than the last received counter
-        sender_fingerprint = self.crypto.calculate_fingerprint()
-        last_counter = self.received_counters.get(sender_fingerprint, -1)
+        last_counter = self.received_counters.get(sender_fingerprint)
         if counter > last_counter:
             self.received_counters[sender_fingerprint] = counter
             return True
         return False
 
-    def process_chat_message(self, data, sender_public_key):
+    # Need to properly handle the new structure of the chat message
+    def process_chat_message(self, data):
         # Decrypt and process incoming chat messages
         try:
-            decrypted_message = self.crypto.decrypt_message(data, sender_public_key)
+            decrypted_message = self.crypto.decrypt_message(data)
             chat_content = json.loads(decrypted_message)
             if self.fingerprint in chat_content['participants']:
                 print(f"Received chat message: {chat_content['message']}")
+                return chat_content['participants'][0]
             else:
                 print("Received chat message not intended for this client")
         except Exception as e:
             print(f"Error decrypting message: {e}")
-
-    def process_public_chat_message(self, data):
-        # Process incoming public chat messages
-        print(f"Received public chat message from {data['sender']}: {data['message']}")
 
     # # Should be a JS function
     # def process_client_list(self, message):
@@ -190,21 +197,20 @@ class Client:
     #         for client_key in server['clients']:
     #             print(f"  Client: {self.crypto.calculate_fingerprint()}")
 
-    # Should be a JS function
-    def run(self):
-        # Main loop to handle incoming messages
-        self.connect_to_server()
-        while True:
-            try:
-                message = self.ws.recv()
-                self.handle_incoming_message(message)
-            except websocket.WebSocketConnectionClosedException:
-                print("WebSocket connection closed")
-                break
-            except Exception as e:
-                print(f"Error: {e}")
+    # # Should be a JS function
+    # def run(self):
+    #     # Main loop to handle incoming messages
+    #     self.connect_to_server()
+    #     while True:
+    #         try:
+    #             message = self.ws.recv()
+    #             self.handle_incoming_message(message)
+    #         except websocket.WebSocketConnectionClosedException:
+    #             print("WebSocket connection closed")
+    #             break
+    #         except Exception as e:
+    #             print(f"Error: {e}")
 
 # Example usage
 if __name__ == "__main__":
     client = Client("test")
-    client.run()
