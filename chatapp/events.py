@@ -1,18 +1,24 @@
 from flask_socketio import emit
+from flask import request
 
 from .extensions import socketio
 
 # in this file, add all events to the socketio object
-
+connected_users = {}
 # connection event
 @socketio.on("connect")
 def handle_connect():
-    print("Client connected")
+    username = request.json.get('username')
+    connected_users[username] = request.sid
+    print(f"{username} connected")
 
 # disconnection event
 @socketio.on("disconnect")
 def handle_disconnect():
-    print("Client disconnected")
+    username = next((user for user, sid in connected_users.items() if sid == request.sid), None)
+    if username:
+        del connected_users[username]
+        print(f"{username} disconnected")
 
 @socketio.on("onJoin")
 def handle_on_join(message):
