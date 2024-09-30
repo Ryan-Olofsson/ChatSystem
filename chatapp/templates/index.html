@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <script src="https://cdn.socket.io/4.1.3/socket.io.min.js" integrity="sha384-cPwlPLvBTa3sKApFE|cHVYjZJ8qjP+C7vdBs4UKL0g==" crossorigin="anonymous"></script>
+
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    <!-- <script src="script.js" defer></script> -->
+
+    <style>
+        .chat-container {
+            width: 300px;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .chat-box {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        .submit-button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .submit-button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <textarea class="chat-box" placeholder="Type your message..."></textarea>
+        <button class="submit-button">Send</button>
+    </div>
+    <script>
+        const socket = io();
+
+        socket.connect();
+
+        socket.on('connect', () => {
+            // Generate public key (this is a placeholder, implement your own logic)
+            const publicKey = 1234; // Replace with actual key generation logic
+
+            // Create the JSON package
+            const message = {
+                type: "hello",
+                publicKey: publicKey
+            };
+
+            // Emit the JSON package to the server
+            socket.emit('onJoin', message); 
+        });
+    </script>
+</body>
+</html>

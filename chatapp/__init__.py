@@ -1,6 +1,7 @@
 from flask import Flask
 
-fromt .e
+
+from .events import socketio
 from .routes import main
 
 def create_app():
@@ -9,5 +10,8 @@ def create_app():
     app.config['SECRET_KEY'] = 'secret'
 
     app.register_blueprint(main)
+
+    socketio.init_app(app)
+
     return app
 
