@@ -118,3 +118,10 @@ def create_client_update(connected_clients):
         "clients": clients
     }
     return client_update
+
+# this function notifies other servers of a client update
+def notify_other_servers_of_client_update():
+    client_update = create_client_update(connected_clients)
+    for server in servers_clients.keys():
+        # send a client update to each server
+        request.post(f'http://{server}/api/message', json=client_update)
