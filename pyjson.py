@@ -1,5 +1,6 @@
 import json as js
 import base64
+from chatapp.serverFunctions import get_server_clients, get_Connected_Clients
 
 m_counter = 0
 
@@ -73,16 +74,19 @@ def public_chat(fingerprint, message):
     }
     return create_signed_message(public_chat_data)
 
-def create_client_list(servers):
+def create_client_list():
     client_list = {
         "type": "client_list",
         "servers": []
     }
-    
-    for server in servers:
+    balls = get_server_clients()
+    pog = get_Connected_Clients()
+    balls["127.0.0.1"] = list(pog.values())
+
+    for server_address, server_clients in balls.items():
         server_info = {
-            "address": server.address,
-            "clients": server.clients
+            "address": server_address,
+            "clients": server_clients
         }
         client_list["servers"].append(server_info)
     

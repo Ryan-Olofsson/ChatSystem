@@ -3,40 +3,32 @@ import base64
 from flask import Flask, request, jsonify
 from flask_socketio import emit
 from crypto import Crypto, calculate_fingerprint
-from pyjson import create_client_list, create_client_update
 from fileSharing import upload_file, retrieve_file
 from .extensions import socketio
 from cryptography.hazmat.primitives import serialization
+import requests
 
 app = Flask(__name__)
 
 connected_clients = {}
+
+servers_clients = {}
+
 Crypto = Crypto()
-
-def is_valid_iv(iv):
-    return isinstance(iv, str) and len(iv) == 16 and all(c in '0123456789abcdef' for c in iv) # unsure if this will work
-
-def is_valid_symmetric_key(key):
-    return isinstance(key, str) and len(key) in [16, 24, 32]  # Example lengths for AES unsure if these will work
-
-def is_valid_chat_data(chat_data):
-    return isinstance(chat_data, str) and len(chat_data) > 0  # Ensure it's a non-empty string, unsure if this will work
-
 
 def handle_hello(message):
     str_public_key = message['data']['public_key']
     public_key = serialization.load_pem_public_key(str_public_key.encode('utf-8'))
     fingerprint = calculate_fingerprint(public_key)
-    print(fingerprint)
+    # print(fingerprint)
     connected_clients[fingerprint] = str_public_key
-    print(connected_clients)
+    servers_clients["127.0.0.1"] = list(connected_clients.values())
+    # print(connected_clients)
     socketio.emit('client_update', create_client_update(connected_clients), to='everyone')
     return jsonify({"status": "Hello message recieved", "fingerprint": fingerprint})
 
 def handle_public_chat(message):
-    sender = message['data']['sender']
-    chat_message = message['data']['message']
-    socketio.emit('public_chat', {'sender': sender, 'message': chat_message}, to='everyone')
+    socketio.emit('public_chat', message, to='everyone')
     return jsonify({"status": "Public chat message broadcasted successfully"}), 200
     
 
@@ -50,19 +42,11 @@ def handle_chat(message):
     if not all([destination_servers, iv, symm_keys, chat_data]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    if not all([is_valid_iv(iv), is_valid_symmetric_key(symm_keys), is_valid_chat_data(chat_data)]):
-        return jsonify({"error": "Invalid"}), 400
-
-    socketio.emit('chat_message', {
-        'destination_servers': destination_servers,
-        'iv': iv,
-        'symm_keys': symm_keys,
-        'chat': chat_data
-    }, to='everyone')
+    socketio.emit('chat_message', message, to='everyone')
     return jsonify({"status": "Chat message forwarded successfully"}), 200
 
 def handle_client_list_request(): # not sure if this is right - it is not right. need to know where we track other servers so i can pass that info.
-    client_list = create_client_list(connected_clients) # need to pass servers instead - cant do currently
+    client_list = create_client_list() # need to pass servers instead - cant do currently
     socketio.emit('client_list', client_list, to='everyone') # this should be correctish.
     return jsonify({"message": "Client list sent to all clients"}), 200
 
@@ -81,3 +65,63 @@ def remove_connected_client_by_fingerprint(fingerprint):
 
 def get_Connected_Clients():
     return connected_clients
+
+def handle_server_hello(message):
+    server_ip = message['data']['sender']
+    client_update = {"type": "client_update_request"}
+    try:
+        response = requests.post(f'http://{server_ip}/api/message', json=client_update)
+        if response.status_code == 200:
+            print(f"Client update sent to {server_ip}")
+        else:
+            print(f"Failed to send client update to {server_ip}")
+    except Exception as e:
+        print(f"Error sending client update to {server_ip}: {e}")
+    return jsonify({"status": "Server hello message recieved"}), 200
+
+def handle_client_update(message):
+    data = message['data']
+    server_address = data['server_address']
+    client_update = data['clients']
+    servers_clients[server_address] = client_update
+
+    client_list = create_client_list()
+    socketio.emit('client_list', client_list, to='everyone')
+    return jsonify({"status": "Client update recieved"}), 200
+
+def get_server_clients():
+    return servers_clients
+
+def create_client_list():
+    client_list = {
+        "type": "client_list",
+        "servers": []
+    }
+    balls = get_server_clients()
+    pog = get_Connected_Clients()
+    balls["127.0.0.1"] = list(pog.values())
+
+    for server_address, server_clients in balls.items():
+        server_info = {
+            "address": server_address,
+            "clients": server_clients
+        }
+        client_list["servers"].append(server_info)
+    print(client_list)
+    
+    return client_list
+
+def create_client_update(connected_clients):
+    clients = list(connected_clients.values())
+    client_update = {
+        "type": "client_update",
+        "clients": clients
+    }
+    return client_update
+
+# this function notifies other servers of a client update
+def notify_other_servers_of_client_update():
+    client_update = create_client_update(connected_clients)
+    for server in servers_clients.keys():
+        # send a client update to each server
+        request.post(f'http://{server}/api/message', json=client_update)
