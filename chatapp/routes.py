@@ -1,8 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_socketio import socketio
-from pyjson import create_client_list, create_client_update
 from fileSharing import upload_file, retrieve_file
-from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request
+from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request, handle_server_hello, handle_client_update, create_client_list, create_client_update
 from client import Client
 from cryptography.hazmat.primitives import serialization 
 from crypto import Crypto, export_public_key
@@ -17,17 +16,22 @@ def index():
 def handle_message():
     print("incomming request:", request.json)
     message = request.json
-    message_type = message['data'].get('type')
+    message_type = message.get('data', {}).get('type')
+    message_type_server = message.get('type')
     if message_type == 'hello':
         return handle_hello(message)
     elif message_type == 'chat':
         return handle_chat(message)
     elif message_type == 'public_chat':
         return handle_public_chat(message)
-    elif message_type == 'client_update_request':
-        return handle_client_update_request(message)
+    elif message_type_server == 'client_update_request':
+        return handle_client_update_request()
     elif message_type == 'client_list_request':
         return handle_client_list_request()
+    elif message_type == 'server_hello':
+        return handle_server_hello(message)
+    elif message_type == 'client_update':
+        return handle_client_update(message)
     else:
         return jsonify({"error": "Unknown message type"}), 400
 

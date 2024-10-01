@@ -5,6 +5,7 @@ from crypto import Crypto, calculate_fingerprint
 
 # Need to include server class for connected clients
 from chatapp.serverFunctions import get_Connected_Clients
+from chatapp.extensions import socketio
 
 
 
@@ -23,6 +24,12 @@ class Client:
         self.counter = 0
         self.received_counters = {}  # To track counters for each sender
 
+        self.connect_to_server("ws://127.0.0.1:5000")  # Replace with your server address
+
+    def connect_to_server(self, server_address):
+        self.ws = socketio.connect(server_address)  # Connect to the server
+        print(f"Connected to server at {server_address}")
+
     # Could be a JS function, may need to be a signed message
     def send_hello(self):
         # Send initial hello message to establish connection and share public key
@@ -30,7 +37,7 @@ class Client:
             "type": "hello",
             "public_key": self.crypto.export_public_key().decode()
         })
-        self.ws.send(json.dumps(hello_message))
+        socketio.emit('signed_data_hello', hello_message)
 
     # Could be a JS function
     def create_signed_message(self, data):
@@ -78,7 +85,7 @@ class Client:
         chat_content["message"] = self.crypto.group_symmetric_encrypt(chat_content["message"], chat_data["symm_keys"][0], chat_data["iv"])
 
         chat_data = self.create_signed_message(chat_data)
-        self.ws.send(json.dumps(chat_data))
+        socketio.emit('signed_data_chat', chat_data)
 
     def send_public_chat_message(self, message):
         # Send a public chat message visible to all clients
@@ -88,7 +95,7 @@ class Client:
             "message": message
         })
 
-        self.ws.send(json.dumps(public_chat_message))
+        socketio.emit('signed_data_public', public_chat_message)
 
     # # Should be a JS function
     # def request_client_list(self):

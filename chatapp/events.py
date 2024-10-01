@@ -5,6 +5,7 @@ from .extensions import socketio
 from crypto import Crypto, calculate_fingerprint
 from .serverFunctions import remove_connected_client_by_fingerprint
 from cryptography.hazmat.primitives import serialization
+import requests
 # in this file, add all events to the socketio object
 connected_users = {}
 Crypto = Crypto()
@@ -56,6 +57,19 @@ def handle_add_user(message):
     print(f"{username} connected with sid {request.sid}")
     # print(connected_users)
 
+@socketio.on('signed_data_chat')
+def handle_signed_data_chat(message):
+    message = request.json
+    destination_servers = message['data'].get('destination_servers')
+    for server in destination_servers:
+        try:
+            response = requests.post(f'http://{server}/api/message', json=message)
+            if response.status_code == 200:
+                print(f"Message sent to {server}")
+            else:
+                print(f"Failed to send message to {server}")
+        except Exception as e:
+            print(f"Error sending message to {server}: {e}")
 
 #@SocketIO.on('disconnect')
 #def handle_disconnect():
