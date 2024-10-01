@@ -4,7 +4,7 @@ import requests
 from crypto import Crypto
 
 # Need to include server class for connected clients
-import serverFunctions
+from chatapp.serverFunctions import get_Connected_Clients
 
 
 
@@ -147,7 +147,8 @@ class Client:
 
         sender_public_key = None
         # Search through servers connected clients to find the public key matching the senders fingerprints
-        for client in serverFunctions.connected_clients:
+        connected_clients = get_Connected_Clients()
+        for client in connected_clients:
             if client['fingerprint'] == sender_fingerprint:
                 sender_public_key = client['public_key']
 

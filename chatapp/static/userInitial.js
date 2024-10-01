@@ -1,6 +1,17 @@
-const socket = io(); 
+let socket;
+
+// Function to initialize the socket
+function initializeSocket() {
+    if (!socket) {
+        socket = io(); // Initialize socket only if it's not already initialized
+        console.log("Socket initialized:", socket.id);
+    }
+}
+ 
 
 export async function initializeUser() {
+    initializeSocket();
+
     const username = prompt("Please enter your username:");
     if (username) {
         console.log("username", username);

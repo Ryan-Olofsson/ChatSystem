@@ -25,6 +25,7 @@ def is_valid_chat_data(chat_data):
 def handle_hello(message):
     public_key = message['data']['public_key']
     fingerprint = Crypto.calculate_fingerprint()
+    print(fingerprint)
     connected_clients[fingerprint] = public_key
     print(connected_clients)
     socketio.emit('client_update', create_client_update(connected_clients), to='everyone')
@@ -67,3 +68,14 @@ def handle_client_update_request(): # not sure if this is right
     client_update = create_client_update(connected_clients)
     socketio.emit('client_update', client_update, to='everyone')
     return jsonify({"status": "Client update sent to all servers"}), 200
+
+def remove_connected_client_by_fingerprint(fingerprint):
+    print(connected_clients)
+    if fingerprint in connected_clients:
+        del connected_clients[fingerprint]
+        print(f"Client with fingerprint {fingerprint} removed")
+    else:
+        print(f"Client with fingerprint {fingerprint} not found")
+
+def get_Connected_Clients():
+    return connected_clients
