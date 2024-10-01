@@ -16,13 +16,6 @@ class Crypto:
         # Extract the public key from the private key
         self.public_key = self.private_key.public_key()
 
-    def export_public_key(self):
-        # Export the public key in PEM encoding with SPKI 
-        return self.public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-
     def asymmetric_encrypt(self, message, public_key):
         # Encrypt a message using RSA with OAEP padding
         return public_key.encrypt(
@@ -71,11 +64,6 @@ class Crypto:
             return True
         except:
             return False
-        
-    def calculate_fingerprint(self):
-        # Calculate the fingerprint of the public key
-        public_key_bytes = self.export_public_key()
-        return base64.b64encode(hashlib.sha256(public_key_bytes).digest()).decode()
 
     def symmetric_encrypt(self, message):
         # Perform symmetric decryption using AES-GCM
@@ -128,6 +116,21 @@ class Crypto:
         # Return the decrypted message
         return decrypted_message.decode()
     
+def export_public_key(public_key):
+    # Export the public key in PEM encoding with SPKI 
+    return public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+def calculate_fingerprint(public_key):
+    # Calculate the fingerprint of the public key
+    public_key_bytes = export_public_key(public_key)
+    return base64.b64encode(hashlib.sha256(public_key_bytes).digest()).decode()
+
+
+
+
 
 def test_crypto():
     print("Testing Crypto class...")
@@ -137,8 +140,8 @@ def test_crypto():
     recipient = Crypto()
 
     # Export public keys
-    sender_public_key = sender.export_public_key()
-    recipient_public_key = recipient.export_public_key()
+    sender_public_key = export_public_key(sender.public_key)
+    recipient_public_key = export_public_key(recipient.public_key)
 
     print("\nSender's public key:")
     print(sender_public_key.decode())
@@ -158,7 +161,7 @@ def test_crypto():
         print(f"{key}: {value[:64]}{'...' if len(value) > 64 else ''}")
 
     # Decrypt message
-    decrypted_message = recipient.decrypt_message(encrypted_data, serialization.load_pem_public_key(sender_public_key))
+    decrypted_message = recipient.decrypt_message(encrypted_data)
 
     print(f"\nDecrypted message: {decrypted_message}")
 

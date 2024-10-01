@@ -4,6 +4,16 @@ import os
 def upload_file(server_url, file_path):
     """Uploads a file to the server."""
 
+    # chcks if server_url is valid
+    if not server_url.startswith('http://') and not server_url.startswith('https://'):
+        print("Error: Invalid server URL.")
+        return None
+
+    # checks if file_path is valid
+    if not os.path.exists(file_path):
+        print("Error: File path is invalid.")
+        return None
+
     max_file_size = 5 * 1024 * 1024  #  5 MB limit
     file_size = os.path.getsize(file_path)
 
@@ -25,6 +35,11 @@ def retrieve_file(file_url, download_path="downloaded_file"):
     """Retrieves a file from the server."""
     # Add error handling for the file retrieval process
     try:
+        # checks if file_url is valid
+        if not file_url.startswith('http://') and not file_url.startswith('https://'):
+            print("Error: Invalid file URL.")
+            return None
+
         response = requests.get(file_url)
         response.raise_for_status()  # Raise an error for bad responses
         with open(download_path, 'wb') as file:
