@@ -16,10 +16,12 @@ class Crypto:
         # Extract the public key from the private key
         self.public_key = self.private_key.public_key()
 
-    def asymmetric_encrypt(self, message, public_key):
+
+
+    def asymmetric_encrypt(self, sym_key, public_key):
         # Encrypt a message using RSA with OAEP padding
         return public_key.encrypt(
-            message,
+            sym_key,
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA256()),
                 algorithm=hashes.SHA256(),
@@ -37,6 +39,8 @@ class Crypto:
                 label=None
             )
         )
+
+
 
     def sign(self, message):
         # Sign a message using RSA with PSS padding
@@ -65,6 +69,8 @@ class Crypto:
         except:
             return False
 
+
+
     def symmetric_encrypt(self, message):
         # Perform symmetric decryption using AES-GCM
         key = AESGCM.generate_key(bit_length=128)
@@ -73,16 +79,20 @@ class Crypto:
         ciphertext_and_tag = aesgcm.encrypt(iv, message, None)
         
         return key, iv, ciphertext_and_tag
-    
-    def group_symmetric_encrypt(self, chat_content, key, iv):
-        # Encrypts both the participants and message based off the key and iv of the first encryption
-        aesgcm = AESGCM(key)
-        return aesgcm.encrypt(iv, chat_content, None)
 
     def symmetric_decrypt(self, key, iv, ciphertext):
         # Perform symmetric decryption using AES-GCM
         aesgcm = AESGCM(key)
         return aesgcm.decrypt(iv, ciphertext, None)
+
+
+
+    def group_symmetric_encrypt(self, content, key, iv):
+        # Encrypts both the participants and message based off the key and iv of the first encryption
+        aesgcm = AESGCM(key)
+        return aesgcm.encrypt(iv, content, None)
+    
+
 
     def encrypt_message(self, message, recipient_public_key):
         # Encrypt a message using hybrid encryption (symmetric + asymmetric)
@@ -99,23 +109,42 @@ class Crypto:
             "encrypted_message": base64.b64encode(encrypted_message).decode(),
         }
 
-    def decrypt_message(self, encrypted_data):
+    def decrypt_message(self, encrypted_data, fingerprint):
         # Decrypt a message using hybrid encryption (symmetric + asymmetric)
 
         # Convert base64 strings back to bytes
         iv = base64.b64decode(encrypted_data["iv"])
-        encrypted_sym_key = base64.b64decode(encrypted_data["symm_key"])
-        encrypted_message = base64.b64decode(encrypted_data["encrypted_message"])
+        chat_content = base64.b64decode(encrypted_data["chat"])
 
-        # Decrypt symmetric key
-        sym_key = self.asymmetric_decrypt(encrypted_sym_key)
+        # Loop through all symmetric keys
+        for encrypted_sym_key in encrypted_data["symm_keys"]:
 
-        # Decrypt message using symmetric key
-        decrypted_message = self.symmetric_decrypt(sym_key, iv, encrypted_message)
+            # Decode symmetric key and try to decrypt using private key
+            encrypted_sym_key = base64.b64decode(encrypted_sym_key)
+            sym_key = self.asymmetric_decrypt(encrypted_sym_key)
 
-        # Return the decrypted message
-        return decrypted_message.decode()
-    
+            # Loop through all participant's fingerprints
+            for participant in chat_content["participants"]:
+
+                # Try to decrypt the fingerprint using the symmetric key and check if the client's fingerprint matches
+                test_fingerprint = self.symmetric_decrypt(sym_key, iv, participant)
+                if test_fingerprint == fingerprint:
+
+                    # If the client is the intended receiver of the message, decrypt the message then return the sender fingerprint and decrypted message
+                    decrypted_message = self.symmetric_decrypt(sym_key, iv, chat_content["message"])
+                    return chat_content["participants"][0], decrypted_message.decode()
+
+        # If none of the fingerprints can be decrypted using any of the symmetric keys, return None for both variables
+        return None, None
+
+        # # Decrypt message using symmetric key
+        # decrypted_message = self.symmetric_decrypt(sym_key, iv, encrypted_message)
+
+        # # Return the decrypted message
+        # return decrypted_message.decode()
+
+
+
 def export_public_key(public_key):
     # Export the public key in PEM encoding with SPKI 
     return public_key.public_bytes(
@@ -127,8 +156,6 @@ def calculate_fingerprint(public_key):
     # Calculate the fingerprint of the public key
     public_key_bytes = export_public_key(public_key)
     return base64.b64encode(hashlib.sha256(public_key_bytes).digest()).decode()
-
-
 
 
 
@@ -161,7 +188,7 @@ def test_crypto():
         print(f"{key}: {value[:64]}{'...' if len(value) > 64 else ''}")
 
     # Decrypt message
-    decrypted_message = recipient.decrypt_message(encrypted_data)
+    decrypted_message = recipient.decrypt_message(encrypted_data, calculate_fingerprint(serialization.load_pem_public_key(recipient_public_key)))
 
     print(f"\nDecrypted message: {decrypted_message}")
 

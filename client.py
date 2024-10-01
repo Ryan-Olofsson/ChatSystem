@@ -1,17 +1,10 @@
 import json
 import base64
 import requests
-from crypto import Crypto, calculate_fingerprint
-
-# Need to include server class for connected clients
+from crypto import Crypto, calculate_fingerprint, export_public_key
+from cryptography.hazmat.primitives import serialization
 from chatapp.serverFunctions import get_Connected_Clients
 from chatapp.extensions import socketio
-
-
-
-# WBESOCKET LOGIC IS PURELY FOR PLACEHOLDER PURPOSES
-# Most of these functions probably dont work, need to find a way to send the messages via websocket
-
 
 
 class Client:
@@ -35,11 +28,10 @@ class Client:
         # Send initial hello message to establish connection and share public key
         hello_message = self.create_signed_message({
             "type": "hello",
-            "public_key": self.crypto.export_public_key().decode()
+            "public_key": export_public_key(self.crypto.public_key).decode()
         })
         socketio.emit('signed_data_hello', hello_message)
 
-    # Could be a JS function
     def create_signed_message(self, data):
         # Create a signed message with counter to prevent replay attacks
         message = {
@@ -53,36 +45,51 @@ class Client:
         self.counter += 1
         return message
 
-    # May need to be modified to handle recipient as just a public key
+    # Need to be modified to handle recipient as just a public key
     def send_chat_message(self, message, recipients, destination_servers):
         # Encrypt and send a chat message to specified recipients
-        chat_data = ({
-            "type": "chat",
-            "destination_servers": destination_servers,
-            "symm_keys": [],
-            "chat": chat_content
-        })
-
         chat_content = {
-            "participants": [self.fingerprint] + [recipient.fingerprint for recipient in recipients],
+            "participants": [],
             "message": message
         }
-        
-        # Need to figure out how to handle signature and tag, signature may be handled in the signed chat process not encryption
+
+        chat_data = {
+            "type": "chat",
+
+            # Assumes destination servers and recipients are in a matching ordered list
+            "destination_servers": destination_servers,
+            "symm_keys": [],
+            "iv": None,
+            "chat": chat_content
+        }
+
+
+        # Set variable for initialising the iv and symm_key
         first = True
 
         # Encrypt message and get encrypted symmetric key for each recipient
         for recipient in recipients:
+            recipient_public_key = serialization.load_pem_public_key(recipient)
+
             if first:
-                encrypted_data = self.crypto.encrypt_message(message, recipient.crypto.public_key)
+                encrypted_data = self.crypto.encrypt_message(message, recipient_public_key)
                 chat_data["iv"] = encrypted_data["iv"]
                 chat_data["symm_keys"].append(encrypted_data["symm_key"])
                 first = False
             else:
-                chat_data["symm_keys"].append(base64.b64encode(self.crypto.asymmetric_encrypt(chat_data["symm_keys"][0], recipient.crypto.public_key)).decode())
+                # Need to change code so that the sym_key is being used for asymmetric_encrypt not base64.b64encode(encrypted_sym_key).decode() which is being passed
+                sym_key_bytes = base64.b64decode(chat_data["symm_keys"][0])  # Decode from base64 to bytes
+                encrypted_sym_key = self.crypto.asymmetric_encrypt(sym_key_bytes, recipient_public_key)
+                chat_data["symm_keys"].append(base64.b64encode(encrypted_sym_key).decode())
 
-        chat_content["participants"] = self.crypto.group_symmetric_encrypt(chat_content["participants"], chat_data["symm_keys"][0], chat_data["iv"])
+
         chat_content["message"] = self.crypto.group_symmetric_encrypt(chat_content["message"], chat_data["symm_keys"][0], chat_data["iv"])
+        chat_content["participants"].append(self.crypto.group_symmetric_encrypt(self.fingerprint, chat_data["symm_keys"][0], chat_data["iv"]))
+
+        for recipient in recipients:
+            chat_content["participants"].append(self.crypto.group_symmetric_encrypt(calculate_fingerprint(recipient_public_key), chat_data["symm_keys"][0], chat_data["iv"]))
+
+        
 
         chat_data = self.create_signed_message(chat_data)
         socketio.emit('signed_data_chat', chat_data)
@@ -105,22 +112,22 @@ class Client:
     #     }
     #     self.ws.send(json.dumps(request))
 
-    def upload_file(self, file_path):
-        # Upload a file to the server
-        with open(file_path, 'rb') as file:
-            response = requests.post(f"http://{self.server_address}/api/upload", files={'file': file})
-        if response.status_code == 200:
-            return response.json()['file_url']
-        else:
-            raise Exception(f"File upload failed with status code {response.status_code}")
+    # def upload_file(self, file_path):
+    #     # Upload a file to the server
+    #     with open(file_path, 'rb') as file:
+    #         response = requests.post(f"http://{self.server_address}/api/upload", files={'file': file})
+    #     if response.status_code == 200:
+    #         return response.json()['file_url']
+    #     else:
+    #         raise Exception(f"File upload failed with status code {response.status_code}")
 
-    def download_file(self, file_url):
-        # Download a file from the server
-        response = requests.get(file_url)
-        if response.status_code == 200:
-            return response.content
-        else:
-            raise Exception(f"File download failed with status code {response.status_code}")
+    # def download_file(self, file_url):
+    #     # Download a file from the server
+    #     response = requests.get(file_url)
+    #     if response.status_code == 200:
+    #         return response.content
+    #     else:
+    #         raise Exception(f"File download failed with status code {response.status_code}")
 
     # # Shouldnt need as only handling signed messages
     # def handle_incoming_message(self, message):
@@ -140,39 +147,53 @@ class Client:
             print(f"Received unknown message type: {message['type']}")
             return
 
+        # Get message data
         data = message['data']
         counter = message['counter']
         signature = base64.b64decode(message['signature'])
         sender_fingerprint = None
 
-
+        # Get fingerprint of sender if the client is the intended reciever, different methods depending on data type
         if data['type'] == 'chat':
-            sender_fingerprint = self.process_chat_message(data, sender_public_key)
+            sender_fingerprint, decrypted_message = self.process_chat_message(data, sender_public_key)
+
+            # Return if client isn't intended receiver
+            if sender_fingerprint == None:
+                print("Received chat message not intended for this client")
+                return
         elif data['type'] == 'public_chat':
             sender_fingerprint = data['sender']
 
-
+        # Set default case
         sender_public_key = None
+
         # Search through servers connected clients to find the public key matching the senders fingerprints
         connected_clients = get_Connected_Clients()
         for client in connected_clients:
             if client['fingerprint'] == sender_fingerprint:
                 sender_public_key = client['public_key']
 
+        # Return if the fingerprint of sender can't be found in connected clients
         if sender_public_key is None:
-            print("Matching fingerprint not found at connected server")
+            print("Received chat message not intended for this client")
             return
-
+        
+        # Verify the signature of the message
         if not self.crypto.verify(json.dumps(data).encode() + str(counter).encode(), signature, sender_public_key):
             print("Invalid signature")
             return
         
+        # Verify the counter of the message
         if not self.verify_counter(sender_fingerprint, counter):
             print("Invalid counter value, possible replay attack")
             return
         
+        # Print the message if the client is intended recipient, signature is verified and the counter is verified
         if data['type'] == 'public_chat':
             print(f"Received public chat message: {data['message']}")
+        
+        if data['type'] == 'chat':
+            print(f"Received chat message from {sender_fingerprint}: {decrypted_message}")
 
     def verify_counter(self, counter, sender_fingerprint):
         # Verify that the message counter is greater than the last received counter
@@ -182,17 +203,17 @@ class Client:
             return True
         return False
 
-    # Need to properly handle the new structure of the chat message
     def process_chat_message(self, data):
         # Decrypt and process incoming chat messages
         try:
-            decrypted_message = self.crypto.decrypt_message(data)
-            chat_content = json.loads(decrypted_message)
-            if self.fingerprint in chat_content['participants']:
-                print(f"Received chat message: {chat_content['message']}")
-                return chat_content['participants'][0]
+            sender_fingerprint, decrypted_message = self.crypto.decrypt_message(data, self.fingerprint)
+            # chat_content = json.loads(decrypted_message)
+
+            # Check if the client was the intended recipient of the message
+            if sender_fingerprint != None:
+                return sender_fingerprint, decrypted_message
             else:
-                print("Received chat message not intended for this client")
+                return None, None
         except Exception as e:
             print(f"Error decrypting message: {e}")
 
@@ -221,4 +242,10 @@ class Client:
 
 # Example usage
 if __name__ == "__main__":
-    client = Client("test")
+    client1 = Client("test")
+    client2 = Client("test2")
+    client3 = Client("test3")
+
+    recipients = {export_public_key(client2.crypto.public_key), export_public_key(client3.crypto.public_key)}
+
+    client1.send_chat_message("Testing", recipients, "localhost")
