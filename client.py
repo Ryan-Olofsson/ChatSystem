@@ -41,7 +41,7 @@ class Client:
             "data": data,
             "counter": self.counter
         }
-        signature = self.crypto.sign(json.dumps(data) + str(self.counter))
+        signature = self.crypto.sign((json.dumps(data) + str(self.counter)).encode())
         message["signature"] = base64.b64encode(signature).decode()
 
         self.counter += 1
@@ -68,6 +68,8 @@ class Client:
 
         # Set variable for initialising the iv and symm_key
         first = True
+        sym_key = None
+        iv = None
 
         # Encrypt message and get encrypted symmetric key for each recipient
         for recipient in recipients:
@@ -75,26 +77,36 @@ class Client:
 
             if first:
                 encrypted_data = self.crypto.encrypt_message(message, recipient_public_key)
-                chat_data["iv"] = encrypted_data["iv"]
-                chat_data["symm_keys"].append(encrypted_data["symm_key"])
+                iv = encrypted_data["iv"]
+
+                chat_data["iv"] = base64.b64encode(encrypted_data["iv"]).decode()
+                sym_key = encrypted_data["symm_key"]
+
+                # Might need to do b64 encoding here or later so that the returned sym_key can be encrypted using other recipient public keys
+                chat_data["symm_keys"].append(encrypted_data["encrypted_symm_key"])
                 first = False
             else:
                 # Need to change code so that the sym_key is being used for asymmetric_encrypt not base64.b64encode(encrypted_sym_key).decode() which is being passed
-                sym_key_bytes = base64.b64decode(chat_data["symm_keys"][0])  # Decode from base64 to bytes
-                encrypted_sym_key = self.crypto.asymmetric_encrypt(sym_key_bytes, recipient_public_key)
+                
+                # sym_key_bytes = base64.b64decode(chat_data["symm_keys"][0])  # Decode from base64 to bytes
+                encrypted_sym_key = self.crypto.asymmetric_encrypt(sym_key, recipient_public_key)
                 chat_data["symm_keys"].append(base64.b64encode(encrypted_sym_key).decode())
 
 
-        chat_content["message"] = self.crypto.group_symmetric_encrypt(chat_content["message"], chat_data["symm_keys"][0], chat_data["iv"])
-        chat_content["participants"].append(self.crypto.group_symmetric_encrypt(self.fingerprint, chat_data["symm_keys"][0], chat_data["iv"]))
+        chat_content["message"] = base64.b64encode(self.crypto.group_symmetric_encrypt(message.encode(), sym_key, iv)).decode()
+        # chat_content["participants"].append(self.crypto.group_symmetric_encrypt(self.fingerprint, sym_key, chat_data["iv"]))
+        chat_content["participants"].append(base64.b64encode(self.crypto.group_symmetric_encrypt(self.fingerprint.encode(), sym_key, iv)).decode())
 
         for recipient in recipients:
-            chat_content["participants"].append(self.crypto.group_symmetric_encrypt(calculate_fingerprint(recipient_public_key), chat_data["symm_keys"][0], chat_data["iv"]))
+            recipient_public_key = serialization.load_pem_public_key(recipient)
+            chat_content["participants"].append(base64.b64encode(self.crypto.group_symmetric_encrypt(calculate_fingerprint(recipient_public_key).encode(), sym_key, iv)).decode())
 
         
 
         chat_data = self.create_signed_message(chat_data)
         socketio.emit('signed_data_chat', chat_data)
+
+        return json.dumps(chat_data)
 
     def send_public_chat_message(self, message):
         # Send a public chat message visible to all clients
@@ -145,6 +157,8 @@ class Client:
 
     def process_signed_message(self, message):
         # Verify the signature and counter of incoming signed messages
+        message = json.loads(message)
+
         if message['type'] != 'signed_data':
             print(f"Received unknown message type: {message['type']}")
             return
@@ -157,7 +171,7 @@ class Client:
 
         # Get fingerprint of sender if the client is the intended reciever, different methods depending on data type
         if data['type'] == 'chat':
-            sender_fingerprint, decrypted_message = self.process_chat_message(data, sender_public_key)
+            sender_fingerprint, decrypted_message = self.process_chat_message(data)
 
             # Return if client isn't intended receiver
             if sender_fingerprint == None:
@@ -250,4 +264,6 @@ if __name__ == "__main__":
 
     recipients = {export_public_key(client2.crypto.public_key), export_public_key(client3.crypto.public_key)}
 
-    client1.send_chat_message("Testing", recipients, "localhost")
+    encrypted_message = client1.send_chat_message("Testing", recipients, "localhost")
+
+    client2.process_signed_message(encrypted_message)

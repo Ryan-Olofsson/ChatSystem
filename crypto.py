@@ -104,9 +104,10 @@ class Crypto:
         
         # Return all necessary components for decryption and verification
         return {
-            "iv": base64.b64encode(iv).decode(),
-            "symm_key": base64.b64encode(encrypted_sym_key).decode(),
+            "iv": iv,
+            "encrypted_symm_key": base64.b64encode(encrypted_sym_key).decode(),
             "encrypted_message": base64.b64encode(encrypted_message).decode(),
+            "symm_key": sym_key
         }
 
     def decrypt_message(self, encrypted_data, fingerprint):
@@ -143,6 +144,11 @@ class Crypto:
         # # Return the decrypted message
         # return decrypted_message.decode()
 
+    def encrypt_key(self, sym_key, recipient_public_key):
+        # Asymmetric encryption of symmetric key
+        encrypted_sym_key = self.asymmetric_encrypt(sym_key, recipient_public_key)
+
+        return base64.b64encode(encrypted_sym_key).decode()
 
 
 def export_public_key(public_key):
