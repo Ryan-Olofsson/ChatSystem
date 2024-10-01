@@ -2,11 +2,13 @@ from flask_socketio import emit
 from flask import request
 
 from .extensions import socketio
-from crypto import Crypto
+from crypto import Crypto, calculate_fingerprint
 from .serverFunctions import remove_connected_client_by_fingerprint
+from cryptography.hazmat.primitives import serialization
 # in this file, add all events to the socketio object
 connected_users = {}
 Crypto = Crypto()
+
 # connection event
 @socketio.on("connect")
 def handle_connect():
@@ -41,12 +43,14 @@ def handle_add_user(message):
     username = message.get('username')
     print(username)
     if isinstance(username, str) and username:  # Check if username is a valid string
-        fingerprint = Crypto.calculate_fingerprint()
-        public_key = message.get('public_key')
+        str_public_key = message.get('public_key')
+        print(str_public_key)
+        public_key = serialization.load_pem_public_key(str_public_key.encode('utf-8'))
+        fingerprint = calculate_fingerprint(public_key)
         connected_users[username] = {
             "sid": request.sid,
             "fingerprint": fingerprint,
-            "public_key": public_key
+            "public_key": str_public_key
         }
         print(connected_users)
     print(f"{username} connected with sid {request.sid}")

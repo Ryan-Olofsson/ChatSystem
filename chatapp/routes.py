@@ -5,6 +5,7 @@ from fileSharing import upload_file, retrieve_file
 from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request
 from client import Client
 from cryptography.hazmat.primitives import serialization 
+from crypto import Crypto, export_public_key
 
 main = Blueprint('main', __name__)
 
@@ -67,7 +68,7 @@ def initialize_user():
     username = request.json.get('username')
     if username:
         user_instance = Client(username)
-        public_key = user_instance.crypto.export_public_key().decode('utf-8')  # Assuming this method exists
-        return jsonify({"public_key": public_key, "username": username}), 200
+        public_key = export_public_key(user_instance.crypto.public_key) # Assuming this method exists
+        return jsonify({"public_key": public_key.decode(), "username": username}), 200
     else:
         return jsonify({"error": "Username is required"}), 400

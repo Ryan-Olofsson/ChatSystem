@@ -1,7 +1,7 @@
 import json
 import base64
 import requests
-from crypto import Crypto
+from crypto import Crypto, calculate_fingerprint
 
 # Need to include server class for connected clients
 from chatapp.serverFunctions import get_Connected_Clients
@@ -19,7 +19,7 @@ class Client:
         self.server_address = None
         self.username = username
         self.crypto = Crypto()
-        self.fingerprint = self.crypto.calculate_fingerprint()
+        self.fingerprint = calculate_fingerprint(self.crypto.public_key)
         self.counter = 0
         self.received_counters = {}  # To track counters for each sender
 
