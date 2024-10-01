@@ -24,18 +24,18 @@
     margin-bottom: 20px;
 }
 
-#styledList {
+#chatHistory {
     list-style-type: none;
     padding: 0;
     margin: 0;
 }
 
-#styledList li {
+#chatHistory li {
     padding: 10px 0px 10px 20px;
     border-bottom: 1px solid lightgrey  ;
 }
 
-#sendMessage {
+#sendButton {
     margin: 0px 0px 0px 3px;
     background-color: black;
     color: white;
@@ -49,7 +49,7 @@
     border-radius: 15px;
 }
 
-#sendMessageForm {
+#messageInput {
     margin: 0px 3px 0px 0px;
     border: 1px solid black;
     border-radius: 15px;

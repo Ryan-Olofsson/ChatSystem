@@ -8,7 +8,6 @@ function initializeSocket() {
     }
 }
  
-
 export async function initializeUser() {
     initializeSocket();
 
@@ -33,6 +32,7 @@ export async function initializeUser() {
         }
     }
 }
+
 export async function sendHelloMessage(publicKey) {
 const message = {
     data: {
