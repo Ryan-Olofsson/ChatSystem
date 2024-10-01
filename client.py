@@ -5,6 +5,7 @@ from crypto import Crypto, calculate_fingerprint, export_public_key
 from cryptography.hazmat.primitives import serialization
 from chatapp.serverFunctions import get_Connected_Clients
 from chatapp.extensions import socketio
+import socketio as socketio_client
 
 
 class Client:
@@ -17,10 +18,11 @@ class Client:
         self.counter = 0
         self.received_counters = {}  # To track counters for each sender
 
-        self.connect_to_server("ws://127.0.0.1:5000")  # Replace with your server address
+        self.sio = socketio_client.Client()
+        self.connect_to_server("http://127.0.0.1:5000")  # Replace with your server address
 
     def connect_to_server(self, server_address):
-        self.ws = socketio.connect(server_address)  # Connect to the server
+        self.sio.connect(server_address)  # Connect to the server
         print(f"Connected to server at {server_address}")
 
     # Could be a JS function, may need to be a signed message

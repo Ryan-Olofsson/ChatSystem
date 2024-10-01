@@ -22,7 +22,8 @@ def handle_hello(message):
     fingerprint = calculate_fingerprint(public_key)
     # print(fingerprint)
     connected_clients[fingerprint] = str_public_key
-    servers_clients["127.0.0.1"] = list(connected_clients.values())
+    servers_clients["127.0.0.1:5000"] = list(connected_clients.values())
+    notify_other_servers_of_client_update()
     # print(connected_clients)
     socketio.emit('client_update', create_client_update(connected_clients), to='everyone')
     return jsonify({"status": "Hello message recieved", "fingerprint": fingerprint})
@@ -59,6 +60,7 @@ def remove_connected_client_by_fingerprint(fingerprint):
     print(connected_clients)
     if fingerprint in connected_clients:
         del connected_clients[fingerprint]
+        notify_other_servers_of_client_update()
         print(f"Client with fingerprint {fingerprint} removed")
     else:
         print(f"Client with fingerprint {fingerprint} not found")
@@ -99,7 +101,7 @@ def create_client_list():
     }
     balls = get_server_clients()
     pog = get_Connected_Clients()
-    balls["127.0.0.1"] = list(pog.values())
+    balls["127.0.0.1:5000"] = list(pog.values())
 
     for server_address, server_clients in balls.items():
         server_info = {
@@ -123,5 +125,8 @@ def create_client_update(connected_clients):
 def notify_other_servers_of_client_update():
     client_update = create_client_update(connected_clients)
     for server in servers_clients.keys():
-        # send a client update to each server
-        request.post(f'http://{server}/api/message', json=client_update)
+        if server != "127.0.0.1:5000":
+            try:
+                requests.post(f'http://{server}/api/message', json=client_update)
+            except Exception as e:
+                print(f"Error sending client update to {server}: {e}")

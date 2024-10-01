@@ -13,7 +13,7 @@ Crypto = Crypto()
 # connection event
 @socketio.on("connect")
 def handle_connect():
-    print("Client connected")
+    print("server websocket connected")
 
 # disconnection event
 @socketio.on("disconnect")
