@@ -33,5 +33,5 @@ Once the username has been entered, the rest of the site can be accessed. Curren
 
 The messaging functionality doesn't interact with the website currently and there is no action executed when the Submit or Chat in Group buttons.
 
-
+Files can be uploaded to the site by clicked the Upload File button, then clicking on the Browse button, selecting a valid file, and finally clicking the Upload button. On a successful upload, a message will be displayed with the URL of the uploaded file. This URL doesn't work and can't be used to download the file.
 
