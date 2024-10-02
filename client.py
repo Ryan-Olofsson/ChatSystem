@@ -115,7 +115,9 @@ class Client:
             "message": message
         })
 
-        socketio.emit('signed_data_public', public_chat_message)
+        # socketio.emit('signed_data_public', public_chat_message)
+        return json.dumps(public_chat_message)
+
 
     # # Should be a JS function
     # def request_client_list(self):
@@ -154,7 +156,7 @@ class Client:
     #     else:
     #         print(f"Received unknown message type: {message['type']}")
 
-    def process_signed_message(self, message):
+    def process_signed_message(self, message, pub_key):
         # Verify the signature and counter of incoming signed messages
         message = json.loads(message)
 
@@ -173,20 +175,16 @@ class Client:
         # Get fingerprint of sender if the client is the intended reciever, different methods depending on data type
         if data['type'] == 'chat':
 
-
-
             # Convert base64 strings back to bytes
             iv = base64.b64decode(data["iv"])
             chat_content = data["chat"]
 
             participants = chat_content['participants']
 
-
             # Loop through all symmetric keys
             for b64_sym_key in data['symm_keys']:
 
                 # Decode symmetric key and try to decrypt using private key
-
                 encrypted_sym_key = base64.b64decode(b64_sym_key)
 
                 try:
@@ -207,7 +205,7 @@ class Client:
 
                             # If the client is the intended receiver of the message, decrypt the message then return the sender fingerprint and decrypted message
                             decrypted_message = self.crypto.symmetric_decrypt(sym_key, iv, base64.b64decode(chat_content["message"]))
-                            sender_fingerprint = participants[0]
+                            sender_fingerprint = self.crypto.symmetric_decrypt(sym_key, iv, base64.b64decode(participants[0])).decode()
                             decrypted_message = decrypted_message.decode()
                             break
                     except Exception as e:
@@ -223,7 +221,6 @@ class Client:
 
         # Set default case
         sender_public_key = None
-        print("Les go")
         print("Sender fingerprint: ", sender_fingerprint)
         print("Message: ", decrypted_message)
 
@@ -232,13 +229,18 @@ class Client:
         # connected_clients = get_Connected_Clients()
 
         connected_clients = {}
-        # connected_clients[calculate_fingerprint("-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----")] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----"
-        # connected_clients[calculate_fingerprint("-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----")] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----"
 
-        for client in connected_clients:
-            print("Client: ", client)
-            if client['fingerprint'] == sender_fingerprint:
-                sender_public_key = client['public_key']
+        test_fingerprint = serialization.load_pem_public_key(b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----")
+        connected_clients[calculate_fingerprint(test_fingerprint)] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----"
+        
+        test_fingerprint_2 = serialization.load_pem_public_key(b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----")
+        connected_clients[calculate_fingerprint(test_fingerprint_2)] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----"
+
+        connected_clients[sender_fingerprint] = pub_key
+
+        for client in connected_clients.keys():
+            if client == sender_fingerprint:
+                sender_public_key = connected_clients[client]
 
         # Return if the fingerprint of sender can't be found in connected clients
         if sender_public_key is None:
@@ -249,6 +251,7 @@ class Client:
         if not self.crypto.verify(json.dumps(data).encode() + str(counter).encode(), signature, sender_public_key):
             print("Invalid signature")
             return
+        print("message verified")
         
         # Verify the counter of the message
         if not self.verify_counter(sender_fingerprint, counter):
@@ -262,9 +265,16 @@ class Client:
         if data['type'] == 'chat':
             print(f"Received chat message from {sender_fingerprint}: {decrypted_message}")
 
+        print("-------------------------------------")
+
     def verify_counter(self, counter, sender_fingerprint):
         # Verify that the message counter is greater than the last received counter
         last_counter = self.received_counters.get(sender_fingerprint)
+
+        if not last_counter:
+            self.received_counters[sender_fingerprint] = counter
+            return True
+
         if counter > last_counter:
             self.received_counters[sender_fingerprint] = counter
             return True
@@ -318,6 +328,19 @@ if __name__ == "__main__":
     recipients = {export_public_key(client2.crypto.public_key), export_public_key(client3.crypto.public_key)}
 
     # Test with multiple servers
-    encrypted_message = client1.send_chat_message("Testing", recipients, "localhost")
+    encrypted_message = client1.send_chat_message("Long message wooooo I love long messages", recipients, "localhost")
+    client2.process_signed_message(encrypted_message, client1.crypto.public_key)
 
-    client2.process_signed_message(encrypted_message)
+    encrypted_message = client1.send_chat_message("Another test message", recipients, "localhost")
+    client2.process_signed_message(encrypted_message, client1.crypto.public_key)
+    client3.process_signed_message(encrypted_message, client1.crypto.public_key)
+
+    message = client1.send_public_chat_message("Public chat")
+    client2.process_signed_message(message, client1.crypto.public_key)
+
+    client1.counter = 0
+    encrypted_message = client1.send_chat_message("Replay attack test", recipients, "localhost")
+    client2.process_signed_message(encrypted_message, client1.crypto.public_key)
+
+
+    # client3.process_signed_message(encrypted_message, client1.crypto.public_key)
