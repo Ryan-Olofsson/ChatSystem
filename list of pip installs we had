@@ -2,3 +2,4 @@ Flask
 Flask-SocketIO
 cryptography
 requests
+websocket-client

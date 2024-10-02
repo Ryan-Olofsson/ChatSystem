@@ -18,6 +18,8 @@ def handle_message():
     message = request.json
     message_type = message.get('data', {}).get('type')
     message_type_server = message.get('type')
+    server_address = request.remote_addr + ":5000"
+    print(server_address)
     if message_type == 'hello':
         return handle_hello(message)
     elif message_type == 'chat':
@@ -26,15 +28,14 @@ def handle_message():
         return handle_public_chat(message)
     elif message_type_server == 'client_update_request':
         return handle_client_update_request()
-    elif message_type == 'client_list_request':
+    elif message_type_server == 'client_list_request':
         return handle_client_list_request()
     elif message_type == 'server_hello':
         return handle_server_hello(message)
-    elif message_type == 'client_update':
-        return handle_client_update(message)
+    elif message_type_server == 'client_update':
+        return handle_client_update(message) # this wont work because we need to be able to pass in an address as i dont know how to get the address of the server that sent the request in this file
     else:
         return jsonify({"error": "Unknown message type"}), 400
-
 
 @main.route('/api/upload', methods=['POST'])
 def upload():

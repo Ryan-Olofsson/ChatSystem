@@ -70,21 +70,22 @@ def get_Connected_Clients():
 
 def handle_server_hello(message):
     server_ip = message['data']['sender']
-    client_update = {"type": "client_update_request"}
+    client_update_request = {"type": "client_update_request"}
     try:
-        response = requests.post(f'http://{server_ip}/api/message', json=client_update)
+        response = requests.post(f'http://{server_ip}/api/message', json=client_update_request)
         if response.status_code == 200:
-            print(f"Client update sent to {server_ip}")
+            print(f"Client update Request sent to {server_ip}")
         else:
-            print(f"Failed to send client update to {server_ip}")
+            print(f"Failed to send client update Request to {server_ip}")
     except Exception as e:
         print(f"Error sending client update to {server_ip}: {e}")
     return jsonify({"status": "Server hello message recieved"}), 200
 
 def handle_client_update(message):
-    data = message['data']
-    server_address = data['server_address']
-    client_update = data['clients']
+    server_address = request.remote_addr + ":5000" 
+    print(server_address)
+    client_update = message['clients']
+    print(client_update)
     servers_clients[server_address] = client_update
 
     client_list = create_client_list()
