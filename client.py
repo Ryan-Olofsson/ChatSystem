@@ -329,6 +329,8 @@ if __name__ == "__main__":
 
     # Test with multiple servers
     encrypted_message = client1.send_chat_message("Long message wooooo I love long messages", recipients, "localhost")
+
+    # PUBLIC KEY BEING PASSED IS ONLY FOR TESTING CONNECTED CLIENTS
     client2.process_signed_message(encrypted_message, client1.crypto.public_key)
 
     encrypted_message = client1.send_chat_message("Another test message", recipients, "localhost")
