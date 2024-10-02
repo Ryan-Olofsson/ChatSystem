@@ -1,3 +1,4 @@
+<!-- Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935 -->
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -62,8 +63,12 @@
                 <form id="margin" class="d-flex">
                     <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
                     <button id="uploadFiles" class="btn btn-primary" type="button">
-                        +
+                        Upload File
                     </button>
+                    <div id="fileUploadContainer" class="d-none">
+                        <input type="file" id="fileInput" />
+                        <button id="submitFileUpload" class="btn btn-primary">Upload</button>
+                    </div>
                     <button id="sendButton" class="btn btn-primary" type="submit">
                         Submit
                     </button>
@@ -123,6 +128,53 @@
                     option.text = fingerprint; // You can format this as needed
                     dropdown.appendChild(option);
                 }
+            }
+
+                    // Toggle file upload container visibility
+            document.getElementById("uploadFiles").addEventListener("click", () => {
+                const container = document.getElementById("fileUploadContainer");
+                container.classList.toggle("d-none");
+            });
+
+            // Handle file upload
+            document.getElementById("submitFileUpload").addEventListener("click", async () => {
+                const fileInput = document.getElementById("fileInput");
+                const serverUrl = 'http://127.0.0.1:5000';
+
+                if (fileInput.files.length === 0) {
+                    alert("Please select a file to upload.");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('server_url', serverUrl);
+                console.log(formData)
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log("File uploaded successfully:", result.file_url);
+                    alert("File uploaded successfully!");
+                } else {
+                    const error = await response.json();
+                    console.error("File upload failed:", error);
+                    alert("File upload failed.");
+                }
+            });
+
+            // Function to handle file download
+            function downloadFile(fileUrl) {
+                const a = document.createElement('a');
+                a.href = fileUrl;
+                a.download = ''; // You can specify a filename here
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
             // List for chat messages that are broadcasted from the server
             // Need to write conditional functionality that handles incoming messages

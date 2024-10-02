@@ -1,18 +1,20 @@
+# Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
 import requests
 import os
 
 def upload_file(server_url, file_path):
     """Uploads a file to the server."""
-
+    print(file_path)
+    print(server_url)
     # chcks if server_url is valid
-    if not server_url.startswith('http://') and not server_url.startswith('https://'):
-        print("Error: Invalid server URL.")
-        return None
+    # if not server_url.startswith('http://') and not server_url.startswith('https://'):
+    #     print("Error: Invalid server URL.")
+    #     return None
 
-    # checks if file_path is valid
-    if not os.path.exists(file_path):
-        print("Error: File path is invalid.")
-        return None
+    # # checks if file_path is valid
+    # if not os.path.exists(file_path):
+    #     print("Error: File path is invalid.")
+    #     return None
 
     max_file_size = 5 * 1024 * 1024  #  5 MB limit
     file_size = os.path.getsize(file_path)

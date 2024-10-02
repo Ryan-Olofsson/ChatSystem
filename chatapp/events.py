@@ -1,3 +1,5 @@
+# Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
+
 from flask_socketio import emit
 from flask import request
 
@@ -79,5 +81,3 @@ def handle_signed_data_chat(message):
         # del connected_clients[fingerprint]
         #SocketIO.emit('client_update', create_client_update(connected_clients), broadcast=True)
     #return jsonify({"status": "Client disconnected"}), 200 #remove this once disconnection logic works.
-
-

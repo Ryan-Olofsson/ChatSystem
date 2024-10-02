@@ -1,24 +1,27 @@
-# Olaf's Neighbourhood Protocol (ONP)
+# Olaf's Neighbourhood Protocol (ONP) --- THIS IS PURPOSEFULLY VULNERABLE CODE, UNFINISHED CODE, RUN WITH CAUTION
 
-This is a simple implementation of a secure messaging system using WebSockets and OpenSSL.
+Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
+
+This is a simple implementation of a secure messaging system using WebSockets and Flask.
 
 ## Requirements
 
 To compile and run this project, you'll need:
 
-- C++11 compatible compiler (e.g., g++)
-- OpenSSL library
-- WebSocket++ library
-- Boost library
+- A python interpreter
+- Flask
+- Flask-SocketIO
+- cryptography
+- requests
+- websocket-client
 
 ## Compilation
 
-To compile the project, use the provided Makefile, run: make install_deps, followed by make.
+To compile the project, first install the requirements by running: pip install -r requirements.txt
 
-This will install the dependencies and compile your source files and create an executable named onp.
+Then run the program itself with: python run.py
 
-To run the program, use: ./onp
+Once finished, you can remove the dependencies by running: pip uninstall -r requirements.txt and then deleting the cloned folder.
 
-If you want to clean up the build (remove the executable), run: make clean
 
 

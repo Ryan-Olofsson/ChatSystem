@@ -1,3 +1,4 @@
+# Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
 from flask import Blueprint, render_template, request, jsonify
 from flask_socketio import socketio
 from fileSharing import upload_file, retrieve_file
@@ -5,6 +6,7 @@ from .serverFunctions import handle_hello, handle_chat, handle_public_chat, hand
 from client import Client
 from cryptography.hazmat.primitives import serialization 
 from crypto import Crypto, export_public_key, calculate_fingerprint
+import os
 
 main = Blueprint('main', __name__)
 
@@ -39,13 +41,19 @@ def handle_message():
 @main.route('/api/upload', methods=['POST'])
 def upload():
     server_url = request.form.get('server_url')
-    file = request.files['file']
+    file = request.files.get('file')
+
+    print("server_url:", server_url)
+    print("file:", file)
 
     if not server_url or not file:
         return jsonify({"error": "Missing fields"}), 400
-    file_path = f"./temp/{file.filename}"
+    temp_dir = "./temp"
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
+    file_path = os.path.join(temp_dir, file.filename).replace("\\", "/")
+    print(file_path)
     file.save(file_path)
-    
     file_url = upload_file(server_url, file_path)
 
     if file_url:

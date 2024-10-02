@@ -1,3 +1,4 @@
+/* Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935 */
 let socket;
 
 // Function to initialize the socket
@@ -61,4 +62,16 @@ fetch('/api/message', {
 .catch(error => {
     console.error("Error:", error);
 });
+}
+
+export function updateSelectedChat() {
+    const dropdown = document.getElementById("onlineUsersDropdown");
+    const selectedFingerprint = dropdown.value; // Get the selected value
+    const selectedChatElement = document.getElementById("selectedChat");
+
+    if (selectedFingerprint) {
+        selectedChatElement.textContent = `Talking to: ${selectedFingerprint}`; // Update the text
+    } else {
+        selectedChatElement.textContent = "Talking to: None"; // Reset if no selection
+    }
 }
