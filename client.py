@@ -19,7 +19,7 @@ class Client:
         self.received_counters = {}  # To track counters for each sender
 
         self.sio = socketio_client.Client()
-        self.connect_to_server("http://127.0.0.1:5000")  # Replace with your server address
+        # self.connect_to_server("http://127.0.0.1:5000")  # Replace with your server address
 
     def connect_to_server(self, server_address):
         self.sio.connect(server_address)  # Connect to the server
@@ -77,34 +77,33 @@ class Client:
 
             if first:
                 encrypted_data = self.crypto.encrypt_message(message, recipient_public_key)
+
                 iv = encrypted_data["iv"]
-
                 chat_data["iv"] = base64.b64encode(encrypted_data["iv"]).decode()
-                sym_key = encrypted_data["symm_key"]
 
-                # Might need to do b64 encoding here or later so that the returned sym_key can be encrypted using other recipient public keys
+                sym_key = encrypted_data["symm_key"]
                 chat_data["symm_keys"].append(encrypted_data["encrypted_symm_key"])
                 first = False
             else:
                 # Need to change code so that the sym_key is being used for asymmetric_encrypt not base64.b64encode(encrypted_sym_key).decode() which is being passed
-                
-                # sym_key_bytes = base64.b64decode(chat_data["symm_keys"][0])  # Decode from base64 to bytes
                 encrypted_sym_key = self.crypto.asymmetric_encrypt(sym_key, recipient_public_key)
                 chat_data["symm_keys"].append(base64.b64encode(encrypted_sym_key).decode())
 
 
         chat_content["message"] = base64.b64encode(self.crypto.group_symmetric_encrypt(message.encode(), sym_key, iv)).decode()
-        # chat_content["participants"].append(self.crypto.group_symmetric_encrypt(self.fingerprint, sym_key, chat_data["iv"]))
-        chat_content["participants"].append(base64.b64encode(self.crypto.group_symmetric_encrypt(self.fingerprint.encode(), sym_key, iv)).decode())
+
+        encrypted_participant = self.crypto.group_symmetric_encrypt(self.fingerprint.encode(), sym_key, iv)
+        chat_content["participants"].append(base64.b64encode(encrypted_participant).decode())
 
         for recipient in recipients:
             recipient_public_key = serialization.load_pem_public_key(recipient)
-            chat_content["participants"].append(base64.b64encode(self.crypto.group_symmetric_encrypt(calculate_fingerprint(recipient_public_key).encode(), sym_key, iv)).decode())
-
+            encrypted_participant = self.crypto.group_symmetric_encrypt(calculate_fingerprint(recipient_public_key).encode(), sym_key, iv)
+            chat_content["participants"].append(base64.b64encode(encrypted_participant).decode())
         
 
         chat_data = self.create_signed_message(chat_data)
-        socketio.emit('signed_data_chat', chat_data)
+        # socketio.emit('signed_data_chat', chat_data)
+        # print(json.dumps(chat_data))
 
         return json.dumps(chat_data)
 
@@ -167,11 +166,53 @@ class Client:
         data = message['data']
         counter = message['counter']
         signature = base64.b64decode(message['signature'])
+
         sender_fingerprint = None
+        decrypted_message = None
 
         # Get fingerprint of sender if the client is the intended reciever, different methods depending on data type
         if data['type'] == 'chat':
-            sender_fingerprint, decrypted_message = self.process_chat_message(data)
+
+
+
+            # Convert base64 strings back to bytes
+            iv = base64.b64decode(data["iv"])
+            chat_content = data["chat"]
+
+            participants = chat_content['participants']
+
+
+            # Loop through all symmetric keys
+            for b64_sym_key in data['symm_keys']:
+
+                # Decode symmetric key and try to decrypt using private key
+
+                encrypted_sym_key = base64.b64decode(b64_sym_key)
+
+                try:
+                    sym_key = self.crypto.asymmetric_decrypt(encrypted_sym_key)
+                except Exception as e:
+                    # print(f"Error decrypting symmetric key: {e}")
+                    continue
+
+                # Loop through all participant's fingerprints
+                for participant in participants:
+                    participant = base64.b64decode(participant)
+
+                    try:
+                        # Try to decrypt the fingerprint using the symmetric key and check if the client's fingerprint matches
+                        test_fingerprint = self.crypto.symmetric_decrypt(sym_key, iv, participant)
+
+                        if test_fingerprint.decode() == self.fingerprint:
+
+                            # If the client is the intended receiver of the message, decrypt the message then return the sender fingerprint and decrypted message
+                            decrypted_message = self.crypto.symmetric_decrypt(sym_key, iv, base64.b64decode(chat_content["message"]))
+                            sender_fingerprint = participants[0]
+                            decrypted_message = decrypted_message.decode()
+                            break
+                    except Exception as e:
+                        # print(f"Error decrypting participant fingerprint: {e}")
+                        continue  # Continue to the next participant if decryption fails
 
             # Return if client isn't intended receiver
             if sender_fingerprint == None:
@@ -182,10 +223,20 @@ class Client:
 
         # Set default case
         sender_public_key = None
+        print("Les go")
+        print("Sender fingerprint: ", sender_fingerprint)
+        print("Message: ", decrypted_message)
+
 
         # Search through servers connected clients to find the public key matching the senders fingerprints
-        connected_clients = get_Connected_Clients()
+        # connected_clients = get_Connected_Clients()
+
+        connected_clients = {}
+        # connected_clients[calculate_fingerprint("-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----")] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----"
+        # connected_clients[calculate_fingerprint("-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----")] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----"
+
         for client in connected_clients:
+            print("Client: ", client)
             if client['fingerprint'] == sender_fingerprint:
                 sender_public_key = client['public_key']
 
@@ -219,19 +270,21 @@ class Client:
             return True
         return False
 
-    def process_chat_message(self, data):
-        # Decrypt and process incoming chat messages
-        try:
-            sender_fingerprint, decrypted_message = self.crypto.decrypt_message(data, self.fingerprint)
-            # chat_content = json.loads(decrypted_message)
+    # def process_chat_message(self, data):
 
-            # Check if the client was the intended recipient of the message
-            if sender_fingerprint != None:
-                return sender_fingerprint, decrypted_message
-            else:
-                return None, None
-        except Exception as e:
-            print(f"Error decrypting message: {e}")
+    #     # Decrypt and process incoming chat messages
+    #     try:
+
+    #         # sender_fingerprint, decrypted_message = self.crypto.decrypt_message(self.fingerprint, data)
+    #         # chat_content = json.loads(decrypted_message)
+
+    #         # Check if the client was the intended recipient of the message
+    #         # if sender_fingerprint != None:
+    #         #     return sender_fingerprint, decrypted_message
+    #         # else:
+    #         return None, None
+    #     except Exception as e:
+    #         print(f"Error decrypting message: {e}")
 
     # # Should be a JS function
     # def process_client_list(self, message):
@@ -264,6 +317,7 @@ if __name__ == "__main__":
 
     recipients = {export_public_key(client2.crypto.public_key), export_public_key(client3.crypto.public_key)}
 
+    # Test with multiple servers
     encrypted_message = client1.send_chat_message("Testing", recipients, "localhost")
 
     client2.process_signed_message(encrypted_message)

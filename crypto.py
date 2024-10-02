@@ -1,6 +1,7 @@
 import os
 import base64
 import hashlib
+import json
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -110,39 +111,19 @@ class Crypto:
             "symm_key": sym_key
         }
 
-    def decrypt_message(self, encrypted_data, fingerprint):
-        # Decrypt a message using hybrid encryption (symmetric + asymmetric)
+    # def decrypt_message(self, fingerprint, encrypted_data):
+    #     # Decrypt a message using hybrid encryption (symmetric + asymmetric)
 
-        # Convert base64 strings back to bytes
-        iv = base64.b64decode(encrypted_data["iv"])
-        chat_content = base64.b64decode(encrypted_data["chat"])
+        
 
-        # Loop through all symmetric keys
-        for encrypted_sym_key in encrypted_data["symm_keys"]:
+    #     # If none of the fingerprints can be decrypted using any of the symmetric keys, return None for both variables
+    #     return None, None
 
-            # Decode symmetric key and try to decrypt using private key
-            encrypted_sym_key = base64.b64decode(encrypted_sym_key)
-            sym_key = self.asymmetric_decrypt(encrypted_sym_key)
+    #     # # Decrypt message using symmetric key
+    #     # decrypted_message = self.symmetric_decrypt(sym_key, iv, encrypted_message)
 
-            # Loop through all participant's fingerprints
-            for participant in chat_content["participants"]:
-
-                # Try to decrypt the fingerprint using the symmetric key and check if the client's fingerprint matches
-                test_fingerprint = self.symmetric_decrypt(sym_key, iv, participant)
-                if test_fingerprint == fingerprint:
-
-                    # If the client is the intended receiver of the message, decrypt the message then return the sender fingerprint and decrypted message
-                    decrypted_message = self.symmetric_decrypt(sym_key, iv, chat_content["message"])
-                    return chat_content["participants"][0], decrypted_message.decode()
-
-        # If none of the fingerprints can be decrypted using any of the symmetric keys, return None for both variables
-        return None, None
-
-        # # Decrypt message using symmetric key
-        # decrypted_message = self.symmetric_decrypt(sym_key, iv, encrypted_message)
-
-        # # Return the decrypted message
-        # return decrypted_message.decode()
+    #     # # Return the decrypted message
+    #     # return decrypted_message.decode()
 
     def encrypt_key(self, sym_key, recipient_public_key):
         # Asymmetric encryption of symmetric key
