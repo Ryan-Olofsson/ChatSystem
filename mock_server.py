@@ -20,14 +20,18 @@ def handle_message():
         client_update_request = {
             "type": "client_update_request"
         }
-        response = requests.post('http://127.0.0.1:5000/api/message', json=client_update_request)
+        response = requests.post('http://127.0.0.1:5000/api/message', json=client_update)
         if response.status_code == 200:
-            print("Client update request sent to 127.0.0.1:5000")
+            print("Client update sent to 127.0.0.1:5000")
         else:
             print("Failed to send client update request to 127.0.0.1:5000")
         return jsonify(client_update)
+    
+    elif message_type == 'client_update':
+        print("Received client_update")
+        return jsonify({"status": "Client update recieved"}), 200
     else:
         return jsonify({"error": "Unknown message type"}), 400
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.2', port=5000)
+    app.run(host='127.0.0.2', port=80)
