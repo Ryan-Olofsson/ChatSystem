@@ -149,7 +149,6 @@
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
                 formData.append('server_url', serverUrl);
-                console.log(formData)
 
                 const response = await fetch('/api/upload', {
                     method: 'POST',
@@ -158,11 +157,14 @@
 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log("File uploaded successfully:", result.file_url);
-                    alert("File uploaded successfully!");
+    
+                    let url = result.file_url.body.file_url.trim();
+                    url = url.replace('./', '');
+                    url = url.replace(/ /g, "%20");
+                    // console.log("File uploaded successfully:", result.file_url);
+                    alert("File uploaded successfully! File URL: " + url);
                 } else {
                     const error = await response.json();
-                    console.error("File upload failed:", error);
                     alert("File upload failed.");
                 }
             });
