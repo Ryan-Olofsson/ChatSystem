@@ -8,27 +8,44 @@
         <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
         <script src="https://cdn.socket.io/4.1.3/socket.io.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" defer></script>
+        <script type="module" src="{{ url_for('static', filename='userInitial.js') }}"></script>
 
         <!-- <script src="{{ url_for('static', filename='script.js') }}" defer></script>
         <script src="{{ url_for('static', filename='userInitial.js') }}" defer></script> -->
     </head>
+    <script>
+    function updateSelectedChat() {
+        const dropdown = document.getElementById("onlineUsersDropdown");
+        const selectedFingerprint = dropdown.value; // Get the selected value
+        const selectedChatElement = document.getElementById("selectedChat");
+
+        if (selectedFingerprint) {
+            selectedChatElement.textContent = `Talking to: ${selectedFingerprint}`; // Update the text
+        } else {
+            selectedChatElement.textContent = "Talking to: None"; // Reset if no selection
+        }
+        }
+    </script>
     <body>
         <div id="container" class="container-fluid vh-100 d-flex flex-column">
             <h2 id="title">OLAF's Neighbourhood Protocol</h2>
             <div class="row">
                 <!-- Dropdown List Users Online and option for group chat message to all users online-->
                 <!-- When user selected person messaging to also changes and retreive chat history in current connection -->
-                 <div class="dropdown col-6">
-                    <button id="dropdownOnlineUsers" class="btn btn-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Users Online
+                <div class="dropdown col-6 d-flex align-items-center">
+                    <label for="onlineUsersDropdown">Online Users:</label>
+                    <select id="onlineUsersDropdown" onchange="updateSelectedChat()">
+                        <option value="" disabled selected>No Online Users</option>
+                    </select>
+                    <button id="refreshClientsButton" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i> <!-- Refresh icon -->
                     </button>
-                    <ul id="onlineUsersList" class="dropdown-menu w-100" aria-labelledby="dropdownOnlineUsers">
-                    </ul>
-                 </div>
-                 <div class="col-6">
+                </div>
+                <div class="col-6">
                     <button id="groupChat" class="btn btn-primary w-100" type="submit">
                         Chat in Group
                     </button>
@@ -61,8 +78,8 @@
             socket.on("connect", () => {
                 initializeUser();
                 // Request the list of connected clients
-                socket.emit("request_connected_clients");
             });
+
 
             // Send messages to the server to be broadcasted to all clients
             // Need to write conditional functionality that encrypts the message based on the public key of the selected recipient
@@ -75,10 +92,38 @@
                 if (message !== "") {
                     socket.emit("sendMessage", message);
                     messageInput.value = ""; // Clear the input after sending
+
+
                 }
             });
 
+            document.getElementById("refreshClientsButton").addEventListener("click", async () => {
+                const response = await fetch('/api/get_all_clients'); // Adjust the endpoint as needed
+                if (response.ok) {
+                    const allClients = await response.json();
+                    updateDropdown(allClients);
+                } else {
+                    console.error("Failed to fetch all clients");
+                }
+            });
 
+            function updateDropdown(allClients) {
+                const dropdown = document.getElementById("onlineUsersDropdown");
+                dropdown.innerHTML = ""; // Clear existing options
+
+                const fingerprints = Object.keys(allClients);
+
+                for (let i = 0; i < fingerprints.length; i++) {
+                    if (i === 0) continue;
+                    
+
+                    const fingerprint = fingerprints[i];
+                    const option = document.createElement("option");
+                    option.value = fingerprint;
+                    option.text = fingerprint; // You can format this as needed
+                    dropdown.appendChild(option);
+                }
+            }
             // List for chat messages that are broadcasted from the server
             // Need to write conditional functionality that handles incoming messages
             // If decryption successful with private key, message is passed, if not ignore

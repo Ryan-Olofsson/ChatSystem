@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_socketio import socketio
 from fileSharing import upload_file, retrieve_file
-from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request, handle_server_hello, handle_client_update, create_client_list, create_client_update
+from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request, handle_server_hello, send_all_clients
 from client import Client
 from cryptography.hazmat.primitives import serialization 
-from crypto import Crypto, export_public_key
+from crypto import Crypto, export_public_key, calculate_fingerprint
 
 main = Blueprint('main', __name__)
 
@@ -18,8 +18,7 @@ def handle_message():
     message = request.json
     message_type = message.get('data', {}).get('type')
     message_type_server = message.get('type')
-    server_address = request.remote_addr + ":5000"
-    print(server_address)
+    # print(server_address)
     if message_type == 'hello':
         return handle_hello(message)
     elif message_type == 'chat':
@@ -33,7 +32,7 @@ def handle_message():
     elif message_type == 'server_hello':
         return handle_server_hello(message)
     elif message_type_server == 'client_update':
-        return handle_client_update(message) # this wont work because we need to be able to pass in an address as i dont know how to get the address of the server that sent the request in this file
+         return jsonify({"status": "Client update received successfully"}), 200 # this wont work because we need to be able to pass in an address as i dont know how to get the address of the server that sent the request in this file
     else:
         return jsonify({"error": "Unknown message type"}), 400
 
@@ -73,7 +72,13 @@ def initialize_user():
     username = request.json.get('username')
     if username:
         user_instance = Client(username)
-        public_key = export_public_key(user_instance.crypto.public_key) # Assuming this method exists
-        return jsonify({"public_key": public_key.decode(), "username": username}), 200
+        public_key = export_public_key(user_instance.crypto.public_key)
+        fingerprint = calculate_fingerprint(user_instance.crypto.public_key)
+        return jsonify({"public_key": public_key.decode(), "username": username, "fingerprint": fingerprint}), 200
     else:
         return jsonify({"error": "Username is required"}), 400
+
+@main.route('/api/get_all_clients', methods=['GET'])
+def get_all_clients():
+    all_clients = send_all_clients()  # Ensure this function returns the current all_clients
+    return jsonify(all_clients), 200

@@ -45,7 +45,7 @@ def handle_add_user(message):
     print(username)
     if isinstance(username, str) and username:  # Check if username is a valid string
         str_public_key = message.get('public_key')
-        print(str_public_key)
+        # print(str_public_key)
         public_key = serialization.load_pem_public_key(str_public_key.encode('utf-8'))
         fingerprint = calculate_fingerprint(public_key)
         connected_users[username] = {
@@ -53,7 +53,7 @@ def handle_add_user(message):
             "fingerprint": fingerprint,
             "public_key": str_public_key
         }
-        print(connected_users)
+        # print(connected_users)
     print(f"{username} connected with sid {request.sid}")
     # print(connected_users)
 
