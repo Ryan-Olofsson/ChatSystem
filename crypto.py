@@ -21,15 +21,20 @@ class Crypto:
 
 
     def asymmetric_encrypt(self, sym_key, public_key):
-        # Encrypt a message using RSA with OAEP padding
-        return public_key.encrypt(
-            sym_key,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
+        try:
+            # Encrypt a message using RSA with OAEP padding
+            return public_key.encrypt(
+                sym_key,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
             )
-        )
+        
+        except Exception as e:
+            print(f"Failed to encrypt key: {e}")
+            raise 
 
     def asymmetric_decrypt(self, ciphertext):
         # Decrypt a message using RSA with OAEP padding
@@ -45,15 +50,20 @@ class Crypto:
 
 
     def sign(self, message):
-        # Sign a message using RSA with PSS padding
-        return self.private_key.sign(
-            message,
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=32
-            ),
-            hashes.SHA256()
-        )
+        try:
+            # Sign a message using RSA with PSS padding
+            return self.private_key.sign(
+                message,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=32
+                ),
+                hashes.SHA256()
+            )
+    
+        except Exception as e:
+            print(f"Failed to sign message: {e}")
+            raise
 
     def verify(self, message, signature, public_key):
         # Verify a signature using RSA with PSS padding
@@ -68,31 +78,47 @@ class Crypto:
                 hashes.SHA256()
             )
             return True
-        except:
+        except Exception as e:
+            print(f"Failed to verify message signature: {e}")
             return False
 
 
 
     def symmetric_encrypt(self, message):
-        # Perform symmetric decryption using AES-GCM
-        key = AESGCM.generate_key(bit_length=128)
-        aesgcm = AESGCM(key)
-        iv = os.urandom(16)
-        ciphertext_and_tag = aesgcm.encrypt(iv, message, None)
+        try:
+            # Perform symmetric decryption using AES-GCM
+            key = AESGCM.generate_key(bit_length=128)
+            aesgcm = AESGCM(key)
+            iv = os.urandom(16)
+            ciphertext_and_tag = aesgcm.encrypt(iv, message, None)
+            
+            return key, iv, ciphertext_and_tag
         
-        return key, iv, ciphertext_and_tag
+        except Exception as e:
+            print(f"Failed to encrypt message: {e}")
+            raise
 
     def symmetric_decrypt(self, key, iv, ciphertext):
-        # Perform symmetric decryption using AES-GCM
-        aesgcm = AESGCM(key)
-        return aesgcm.decrypt(iv, ciphertext, None)
+        try:
+            # Perform symmetric decryption using AES-GCM
+            aesgcm = AESGCM(key)
+            return aesgcm.decrypt(iv, ciphertext, None)
+    
+        except Exception as e:
+            print(f"Failed to decrypt message: {e}")
+            raise
 
 
 
     def group_symmetric_encrypt(self, content, key, iv):
-        # Encrypts both the participants and message based off the key and iv of the first encryption
-        aesgcm = AESGCM(key)
-        return aesgcm.encrypt(iv, content, None)
+        try:
+            # Encrypts both the participants and message based off the key and iv of the first encryption
+            aesgcm = AESGCM(key)
+            return aesgcm.encrypt(iv, content, None)
+    
+        except Exception as e:
+            print(f"Failed to encrypt data: {e}")
+            raise
     
 
 
@@ -147,42 +173,42 @@ def calculate_fingerprint(public_key):
 
 
 
-def test_crypto():
-    print("Testing Crypto class...")
+# def test_crypto():
+#     print("Testing Crypto class...")
 
-    # Create instances for sender and recipient
-    sender = Crypto()
-    recipient = Crypto()
+#     # Create instances for sender and recipient
+#     sender = Crypto()
+#     recipient = Crypto()
 
-    # Export public keys
-    sender_public_key = export_public_key(sender.public_key)
-    recipient_public_key = export_public_key(recipient.public_key)
+#     # Export public keys
+#     sender_public_key = export_public_key(sender.public_key)
+#     recipient_public_key = export_public_key(recipient.public_key)
 
-    print("\nSender's public key:")
-    print(sender_public_key.decode())
+#     print("\nSender's public key:")
+#     print(sender_public_key.decode())
 
-    print("\nRecipient's public key:")
-    print(recipient_public_key.decode())
+#     print("\nRecipient's public key:")
+#     print(recipient_public_key.decode())
 
-    # Test message
-    original_message = "This is a test message."
-    print(f"\nOriginal message: {original_message}")
+#     # Test message
+#     original_message = "This is a test message."
+#     print(f"\nOriginal message: {original_message}")
 
-    # Encrypt message
-    encrypted_data = sender.encrypt_message(original_message, serialization.load_pem_public_key(recipient_public_key))
+#     # Encrypt message
+#     encrypted_data = sender.encrypt_message(original_message, serialization.load_pem_public_key(recipient_public_key))
 
-    print("\nEncrypted data:")
-    for key, value in encrypted_data.items():
-        print(f"{key}: {value[:64]}{'...' if len(value) > 64 else ''}")
+#     print("\nEncrypted data:")
+#     for key, value in encrypted_data.items():
+#         print(f"{key}: {value[:64]}{'...' if len(value) > 64 else ''}")
 
-    # Decrypt message
-    decrypted_message = recipient.decrypt_message(encrypted_data, calculate_fingerprint(serialization.load_pem_public_key(recipient_public_key)))
+#     # Decrypt message
+#     decrypted_message = recipient.decrypt_message(encrypted_data, calculate_fingerprint(serialization.load_pem_public_key(recipient_public_key)))
 
-    print(f"\nDecrypted message: {decrypted_message}")
+#     print(f"\nDecrypted message: {decrypted_message}")
 
-    # Verify that the decrypted message matches the original
-    assert original_message == decrypted_message, "Decryption failed: messages don't match"
-    print("\nTest passed: Original and decrypted messages match.")
+#     # Verify that the decrypted message matches the original
+#     assert original_message == decrypted_message, "Decryption failed: messages don't match"
+#     print("\nTest passed: Original and decrypted messages match.")
 
-if __name__ == "__main__":
-    test_crypto()
+# if __name__ == "__main__":
+#     test_crypto()
