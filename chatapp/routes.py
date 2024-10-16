@@ -48,6 +48,14 @@ def upload():
 
     if not server_url or not file:
         return jsonify({"error": "Missing fields"}), 400
+    max_file_size = 5 * 1024 * 1024  # 5 MB in bytes
+    file.seek(0, os.SEEK_END)  # Move the cursor to the end of the file
+    file_size = file.tell()  # Get the current position of the cursor, which is the size
+    file.seek(0)  # Reset the cursor to the beginning of the file
+
+    if file_size > max_file_size:
+        return jsonify({"error": "File size exceeds the 5 MB limit"}), 413
+    
     temp_dir = "./temp"
     if not os.path.exists(temp_dir):
         os.makedirs(temp_dir)

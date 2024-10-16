@@ -76,12 +76,14 @@
             </div>        
         </div>
         <script type="module">
-            import { initializeUser } from "{{ url_for('static', filename='userInitial.js') }}";
+            import { initializeUser, getUserFingerprint } from "{{ url_for('static', filename='userInitial.js') }}";
             const socket = io();
 
             socket.connect();
-            socket.on("connect", () => {
-                initializeUser();
+            socket.on("connect", async () => {
+                await initializeUser();
+                const userFingerprint = getUserFingerprint();
+                console.log("User Fingerprint balls:", userFingerprint);
                 // Request the list of connected clients
             });
 
@@ -106,27 +108,32 @@
                 const response = await fetch('/api/get_all_clients'); // Adjust the endpoint as needed
                 if (response.ok) {
                     const allClients = await response.json();
-                    updateDropdown(allClients);
+                    const userFingerprint = getUserFingerprint();
+                    // console.log("User Fingerprint balls:", userFingerprint);
+                    updateDropdown(allClients, userFingerprint);
                 } else {
                     console.error("Failed to fetch all clients");
                 }
             });
 
-            function updateDropdown(allClients) {
+            function updateDropdown(allClients, userFingerprint) {
                 const dropdown = document.getElementById("onlineUsersDropdown");
                 dropdown.innerHTML = ""; // Clear existing options
-
                 const fingerprints = Object.keys(allClients);
-
+                let hasOptions = false;
                 for (let i = 0; i < fingerprints.length; i++) {
-                    if (i === 0) continue;
-                    
-
                     const fingerprint = fingerprints[i];
+                    if (fingerprint === userFingerprint) 
+                        continue;
                     const option = document.createElement("option");
                     option.value = fingerprint;
                     option.text = fingerprint; // You can format this as needed
                     dropdown.appendChild(option);
+                    hasOptions = true;
+                }
+                if (hasOptions) {
+                    dropdown.selectedIndex = 0;
+                    updateSelectedChat();
                 }
             }
 
@@ -165,7 +172,11 @@
                     alert("File uploaded successfully! File URL: " + url);
                 } else {
                     const error = await response.json();
-                    alert("File upload failed.");
+                    if (response.status === 413) {
+                        alert("File size exceeds the 5 MB limit.");
+                    } else {
+                        alert("File upload failed.");
+                    }
                 }
             });
 

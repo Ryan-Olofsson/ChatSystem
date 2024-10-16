@@ -1,5 +1,6 @@
 /* Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935 */
 let socket;
+let userFingerprint;
 
 // Function to initialize the socket
 function initializeSocket() {
@@ -25,8 +26,10 @@ export async function initializeUser() {
         const data = await response.json();
         if (response.ok) {
             const public_key = data.public_key;
+            userFingerprint = data.fingerprint;
             socket.emit("addUser", {username, public_key});
             console.log("Public Key:", public_key);
+            console.log("User Fingerprint:", userFingerprint);
             await sendHelloMessage(public_key);
         } else {
             alert("Username is required to connect.");
@@ -74,4 +77,8 @@ export function updateSelectedChat() {
     } else {
         selectedChatElement.textContent = "Talking to: None"; // Reset if no selection
     }
+}
+
+export function getUserFingerprint() {
+    return userFingerprint;
 }
