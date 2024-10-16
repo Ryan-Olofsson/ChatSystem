@@ -23,7 +23,7 @@ def upload_file(server_url, file_path):
         print("Error: File size too large.")
         return None
     
-    file_url = f"{server_url}/{file_path}"
+    file_url = f"{server_url}/{os.path.basename(file_path)}"
     print(file_url)
 
     return {

@@ -1,5 +1,5 @@
 # Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, send_from_directory
 from flask_socketio import socketio
 from fileSharing import upload_file, retrieve_file
 from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request, handle_server_hello, send_all_clients
@@ -55,24 +55,40 @@ def upload():
     print(file_path)
     file.save(file_path)
     file_url = upload_file(server_url, file_path)
+    print(f'file_url: {file_url}')
 
     if file_url:
         return jsonify({"file_url": file_url}), 200
     else:
         return jsonify({"error": "Failed to upload file"}), 500
     
-@main.route('/api/download', methods=['GET'])
-def download():
-    file_url = request.args.get('file_url')
-    download_path = request.args.get('download_path', 'downloaded_file')
+# @main.route('/api/download', methods=['GET'])
+# def download():
+#     file_url = request.args.get('file_url')
+#     download_path = request.args.get('download_path', 'downloaded_file')
 
-    if not file_url:
-        return jsonify({"error": "Missing fields"}), 400
+#     if not file_url:
+#         return jsonify({"error": "Missing fields"}), 400
     
+#     try:
+#         retrieve_file(file_url, download_path)
+#         return jsonify({"status": "File downloaded successfully"}), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
+@main.route('/<filename>', methods=['GET'])
+def serve_file(filename):
+    temp_dir = os.path.abspath("temp")
+    files_in_temp = os.listdir(temp_dir)
+    # Check if the requested file is in the directory
+    if filename not in files_in_temp:
+        return jsonify({"error": f"File {filename} not found in temp directory"}), 404
     try:
-        retrieve_file(file_url, download_path)
-        return jsonify({"status": "File downloaded successfully"}), 200
+        return send_from_directory(temp_dir, filename)
+    except FileNotFoundError:
+        return jsonify({"error": "File not found"}), 404
     except Exception as e:
+        print(f"Error serving file {filename}: {e}")
         return jsonify({"error": str(e)}), 500
 
 @main.route('/initialize_user', methods=['POST'])
@@ -90,3 +106,8 @@ def initialize_user():
 def get_all_clients():
     all_clients = send_all_clients()  # Ensure this function returns the current all_clients
     return jsonify(all_clients), 200
+
+
+@main.route('/favicon.ico')
+def favicon():
+    return send_from_directory('static', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
