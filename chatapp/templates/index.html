@@ -67,19 +67,23 @@
                          </ul>
                     </div>
                 </div>
-                <form id="margin" class="d-flex">
-                    <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
-                    <button id="uploadFiles" class="btn btn-primary" type="button">
+                <!-- <form id="margin" class="d-flex"> -->
+                    <div class="d-flex">
+                        <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
+                        <button id="uploadFiles" class="btn btn-primary" type="button">
                         Upload File
                     </button>
                     <div id="fileUploadContainer" class="d-none">
                         <input type="file" id="fileInput" />
                         <button id="submitFileUpload" class="btn btn-primary">Upload</button>
                     </div>
-                    <button id="sendButton" class="btn btn-primary" type="submit">
-                        Submit
-                    </button>
-                </form>
+                    <form id="margin" class="d-flex">
+                        <button id="sendButton" class="btn btn-primary" type="submit">
+                            Send
+                        </button>
+                    </form>
+                </div>
+                <!-- </form> -->
             </div>        
         </div>
         <script type="module">

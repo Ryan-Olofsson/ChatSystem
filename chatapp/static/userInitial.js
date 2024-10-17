@@ -12,8 +12,14 @@ function initializeSocket() {
  
 export async function initializeUser() {
     initializeSocket();
+    let username = "";
+    while (!username) {
+        username = prompt("Please enter your username:");
+        if (!username) {
+            alert("Username is required to connect.");
+        }
+    }
 
-    const username = prompt("Please enter your username:");
     if (username) {
         console.log("username", username);
         const response = await fetch('/initialize_user', {
