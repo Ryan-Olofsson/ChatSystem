@@ -131,6 +131,7 @@
                 const dropdown = document.getElementById("onlineUsersDropdown");
                 const selectedFingerprint = dropdown.value;
                 const chatHistory = document.getElementById("chatHistory");
+                const userFingerprint = getUserFingerprint()
                 if (message !== "") {
                     let messageType = "Public";
                     let recipientInfo = "";
@@ -143,7 +144,8 @@
                         recipientInfo = ` to ${selectedFingerprint.substring(0, 6)}...`;
                         socket.emit("private_chat", {
                             message: message,
-                            to: selectedFingerprint
+                            to: selectedFingerprint,
+                            from: userFingerprint
                         });
                     }
                     const li = document.createElement("li");
@@ -253,6 +255,7 @@
                 ul.appendChild(li);
                 ul.scrollTop = ul.scrollHeight; // Scroll to the bottom
             });
+            
             document.getElementById("groupChat").addEventListener("click", () => {
                 const recipientsList = document.getElementById("recipientsList");
                 recipientsList.innerHTML = ""; // Clear existing recipients
