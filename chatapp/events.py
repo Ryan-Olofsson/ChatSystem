@@ -4,10 +4,14 @@ from flask_socketio import emit
 from flask import request
 
 from .extensions import socketio
-from crypto import Crypto, calculate_fingerprint
-from .serverFunctions import remove_connected_client_by_fingerprint
+from crypto import Crypto, calculate_fingerprint, export_public_key
+from .serverFunctions import remove_connected_client_by_fingerprint, send_all_clients, send_our_clients, send_our_connected_clients
 from cryptography.hazmat.primitives import serialization
 import requests
+import json
+from client import Client
+
+
 # in this file, add all events to the socketio object
 connected_users = {}
 Crypto = Crypto()
@@ -59,10 +63,11 @@ def handle_add_user(message):
     print(f"{username} connected with sid {request.sid}")
     # print(connected_users)
 
-@socketio.on('signed_data_chat')
+@socketio.on("signed_data_chat")
 def handle_signed_data_chat(message):
-    message = request.json
-    destination_servers = message['data'].get('destination_servers')
+    data = message['data']
+    destination_servers = data['destination_servers']
+
     for server in destination_servers:
         try:
             response = requests.post(f'http://{server}/api/message', json=message)
@@ -73,11 +78,30 @@ def handle_signed_data_chat(message):
         except Exception as e:
             print(f"Error sending message to {server}: {e}")
 
-#@SocketIO.on('disconnect')
-#def handle_disconnect():
-    # need a way to identify fingerprint of client that disconnected., storing it somewhere for use
-    #fingerprint = x
-    # if fingerprint in connected_clients:
-        # del connected_clients[fingerprint]
-        #SocketIO.emit('client_update', create_client_update(connected_clients), broadcast=True)
-    #return jsonify({"status": "Client disconnected"}), 200 #remove this once disconnection logic works.
+@socketio.on("private_chat")
+def handle_private_chat(data):
+    message = data.get("message")
+    recipient = data.get("to")
+    sender = data.get("from")
+
+    try: 
+        our_clients = send_our_clients()
+        user_instance = our_clients.get(sender)
+
+        all_clients = send_all_clients()
+        recipient_pub_key = all_clients.get(recipient)
+
+        public_key = serialization.load_pem_public_key(recipient_pub_key.encode('utf-8'))
+        public_key = export_public_key(public_key)
+        recipients = {public_key}
+
+        if user_instance:
+            print("user instance found: ", user_instance.fingerprint)
+
+            signed_message = user_instance.send_chat_message(message, recipients, ["127.0.0.1:5000"])
+            handle_signed_data_chat(signed_message)
+        else:
+            print(f"No client instance found for sender: {sender}")
+
+    except Exception as e:
+        print(f"Failed to handle private message")
