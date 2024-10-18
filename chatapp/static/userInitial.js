@@ -62,7 +62,7 @@ fetch('/api/message', {
     return response.json();
 })
 .then(data => {
-    console.log("Response from server:", data);
+    console.log("Response from server:", "successful connection");
 })
 .catch(error => {
     console.error("Error:", error);
