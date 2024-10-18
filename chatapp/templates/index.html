@@ -90,9 +90,9 @@
                          </ul>
                     </div>
                 </div>
-                <div class="d-flex">
-                    <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
-                    <button id="uploadFiles" class="btn btn-primary" type="button">
+                    <div class="d-flex">
+                        <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
+                        <button id="uploadFiles" class="btn btn-primary" type="button">
                         Upload File
                     </button>
                     <div id="fileUploadContainer" class="d-none">
@@ -117,7 +117,6 @@
             socket.on("connect", async () => {
                 await initializeUser(); // Initialize user on connection
                 const userFingerprint = getUserFingerprint(); // Get user fingerprint
-                console.log("User Fingerprint balls:", userFingerprint);
                 // Request the list of connected clients
             });
 

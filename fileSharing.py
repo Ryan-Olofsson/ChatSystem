@@ -32,17 +32,6 @@ def upload_file(server_url, file_path):
         }
     }
 
-
-    # with open(file_path, 'rb') as file:
-    #     response = requests.post(f"{server_url}/api/upload", files={'file': file})
-    
-    # if response.status_code == 200:
-    #     return response.json().get('file_url')
-    # elif response.status_code == 413:
-    #     print("Error: File size too large.")
-    # else:
-    #     print(f"Error: Unable to upload file. Status code: {response.status_code}")
-
 def retrieve_file(file_url, download_path="downloaded_file"):
     """Retrieves a file from the server."""
     # Add error handling for the file retrieval process

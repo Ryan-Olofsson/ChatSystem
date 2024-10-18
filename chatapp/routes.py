@@ -71,19 +71,6 @@ def upload():
     else:
         return jsonify({"error": "Failed to upload file"}), 500
     
-# @main.route('/api/download', methods=['GET'])
-# def download():
-#     file_url = request.args.get('file_url')
-#     download_path = request.args.get('download_path', 'downloaded_file')
-
-#     if not file_url:
-#         return jsonify({"error": "Missing fields"}), 400
-    
-#     try:
-#         retrieve_file(file_url, download_path)
-#         return jsonify({"status": "File downloaded successfully"}), 200
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
 
 @main.route('/<filename>', methods=['GET'])
 def serve_file(filename):

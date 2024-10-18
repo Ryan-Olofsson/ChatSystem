@@ -80,11 +80,11 @@ def create_client_list():
         "type": "client_list",
         "servers": []
     }
-    balls = get_server_clients()
-    pog = get_Connected_Clients()
-    balls["127.0.0.1"] = list(pog.values())
+    server_clients = get_server_clients()
+    connected_clients = get_Connected_Clients()
+    server_clients["127.0.0.1"] = list(connected_clients.values())
 
-    for server_address, server_clients in balls.items():
+    for server_address, server_clients in server_clients.items():
         server_info = {
             "address": server_address,
             "clients": server_clients

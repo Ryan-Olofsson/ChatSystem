@@ -1,6 +1,6 @@
-# Olaf's Neighbourhood Protocol (ONP) --- THIS IS PURPOSEFULLY VULNERABLE CODE, UNFINISHED CODE, RUN WITH CAUTION
+# Olaf's Neighbourhood Protocol (ONP)
 
-Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
+Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935, Isaak Goodwin.
 
 This is a simple implementation of a secure messaging system using WebSockets and Flask.
 
@@ -25,13 +25,23 @@ Once finished, you can remove the dependencies by running: pip uninstall -r requ
 
 ## Program Functionality
 
-Once python run.py has been executed, the messaging platform can be accessed using the URL 127.0.0.1:5000
+Once python serverStart.py has been executed, it will act as the hub for all server responses/messages.
 
-Currently, the username entry prompt when visting the site is simply used for debugging purposes and is irrelevant to functionality.
+For each client instance, run python clientStart.py. This can be accessible by navigating to the URL 127.0.0.1:5000 in any browser.
 
-Once the username has been entered, the rest of the site can be accessed. Currently there is very minimal functionality available. New instances of the client can be created by making a new tab with the same URL. When this is done, the number of online users dropdown selection will update to display the fingerprint of all other online users who can be messaged. The list can be updated by pressing the button next to the dropdown selector.
+The username entry prompt is used to identify users in the system. It is required to enter a username to proceed.
 
-The messaging functionality doesn't interact with the website currently and there is no action executed when the Submit or Chat in Group buttons.
+Once the username has been entered, the rest of the site can be accessed. 
 
-Files can be uploaded to the site by clicked the Upload File button, then clicking on the Browse button, selecting a valid file, and finally clicking the Upload button. On a successful upload, a message will be displayed with the URL of the uploaded file. This URL doesn't work and can't be used to download the file.
+Once multiple clients are running, the refresh button can be clicked to update the list of online users. This can be accessed in the dropdown.
+
+Based on the list of online users, messages can be sent to specific users. It will indicate which user the message is sent to on the application.
+
+Group chat button opens a modal where multiple users can be selected to send a group message to.
+
+Unfortunately, whilst we can encrypt with the sender and decrypt with the reciever, we are unable to get it to show on the recievers screen.
+
+Files can be uploaded to the site by clicked the Upload File button, then clicking on the Browse button, selecting a valid file, and finally clicking the Upload button. On a successful upload, a message will be displayed with the URL of the uploaded file.
+
+Files can be retrieved by entering the url provided in the upload message into the web browser url.
 
