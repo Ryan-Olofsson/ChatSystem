@@ -19,10 +19,6 @@ To compile and run this project, you'll need:
 
 To compile the project, first install the requirements by running: pip install -r requirements.txt
 
-Then run the program itself with: python run.py
-
-Once finished, you can remove the dependencies by running: pip uninstall -r requirements.txt and then deleting the cloned folder.
-
 ## Program Functionality
 
 Once python serverStart.py has been executed, it will act as the hub for all server responses/messages.
@@ -45,3 +41,4 @@ Files can be uploaded to the site by clicked the Upload File button, then clicki
 
 Files can be retrieved by entering the url provided in the upload message into the web browser url.
 
+Once finished, you can remove the dependencies by running: pip uninstall -r requirements.txt and then deleting the cloned folder.
