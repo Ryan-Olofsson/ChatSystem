@@ -6,7 +6,6 @@ let userFingerprint;
 function initializeSocket() {
     if (!socket) {
         socket = io(); // Initialize socket only if it's not already initialized
-        console.log("Socket initialized:", socket.id);
     }
 }
  
@@ -21,7 +20,6 @@ export async function initializeUser() {
     }
 
     if (username) {
-        console.log("username", username);
         const response = await fetch('/initialize_user', {
             method: 'POST',
             headers: {
@@ -34,8 +32,6 @@ export async function initializeUser() {
             const public_key = data.public_key;
             userFingerprint = data.fingerprint;
             socket.emit("addUser", {username, public_key});
-            console.log("Public Key:", public_key);
-            console.log("User Fingerprint:", userFingerprint);
             await sendHelloMessage(public_key);
         } else {
             alert("Username is required to connect.");

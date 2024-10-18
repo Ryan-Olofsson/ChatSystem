@@ -15,8 +15,7 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" defer></script>
         <script type="module" src="{{ url_for('static', filename='userInitial.js') }}"></script>
 
-        <!-- <script src="{{ url_for('static', filename='script.js') }}" defer></script>
-        <script src="{{ url_for('static', filename='userInitial.js') }}" defer></script> -->
+        
     </head>
     <script>
     function updateSelectedChat() {
@@ -88,7 +87,6 @@
                          </ul>
                     </div>
                 </div>
-                <!-- <form id="margin" class="d-flex"> -->
                     <div class="d-flex">
                         <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
                         <button id="uploadFiles" class="btn btn-primary" type="button">
@@ -104,7 +102,6 @@
                         </button>
                     </form>
                 </div>
-                <!-- </form> -->
             </div>        
         </div>
         <script type="module">
@@ -115,7 +112,6 @@
             socket.on("connect", async () => {
                 await initializeUser();
                 const userFingerprint = getUserFingerprint();
-                console.log("User Fingerprint balls:", userFingerprint);
                 // Request the list of connected clients
             });
 
@@ -161,7 +157,6 @@
                 if (response.ok) {
                     const allClients = await response.json();
                     const userFingerprint = getUserFingerprint();
-                    // console.log("User Fingerprint balls:", userFingerprint);
                     updateDropdown(allClients, userFingerprint);
                 } else {
                     console.error("Failed to fetch all clients");
@@ -224,7 +219,7 @@
                     let url = result.file_url.body.file_url.trim();
                     url = url.replace('./', '');
                     url = url.replace(/ /g, "%20");
-                    // console.log("File uploaded successfully:", result.file_url);
+                    
                     alert("File uploaded successfully! File URL: " + url);
                 } else {
                     const error = await response.json();
@@ -298,7 +293,6 @@
                         recipients: selectedRecipients,
                         from: userFingerprint
                     });
-                    console.log(selectedRecipients)
                     const chatHistory = document.getElementById("chatHistory");
                     const li = document.createElement("li");
                     li.textContent = `[Group Chat] ${message}`;
