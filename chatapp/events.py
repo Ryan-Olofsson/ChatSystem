@@ -105,3 +105,32 @@ def handle_private_chat(data):
 
     except Exception as e:
         print(f"Failed to handle private message")
+
+@socketio.on("group_chat")
+def handle_group_chat(data):
+    message = data.get("message")
+    recipients = data.get("recipients")
+    sender = data.get("from")
+
+    public_keys = []
+
+    try: 
+        our_clients = send_our_clients()
+        user_instance = our_clients.get(sender)
+
+        all_clients = send_all_clients()
+        for recipient in recipients:
+            recipient_pub_key = all_clients.get(recipient)
+            public_key = serialization.load_pem_public_key(recipient_pub_key.encode('utf-8'))
+            public_keys.append(export_public_key(public_key))
+
+        if user_instance:
+            print("user instance found: ", user_instance.fingerprint)
+
+            signed_message = user_instance.send_chat_message(message, public_keys, ["127.0.0.1:5000"])
+            handle_signed_data_chat(signed_message)
+        else:
+            print(f"No client instance found")
+
+    except Exception as e:
+        print(f"Failed to handle private message")
