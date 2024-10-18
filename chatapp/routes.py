@@ -2,11 +2,12 @@
 from flask import Blueprint, render_template, request, jsonify, send_from_directory
 from flask_socketio import socketio
 from fileSharing import upload_file, retrieve_file
-from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request, handle_server_hello, send_all_clients
+from .serverFunctions import handle_hello, handle_chat, handle_public_chat, handle_client_update_request, handle_client_list_request, handle_server_hello, send_all_clients, send_our_clients
 from client import Client
 from cryptography.hazmat.primitives import serialization 
 from crypto import Crypto, export_public_key, calculate_fingerprint
 import os
+import json
 
 main = Blueprint('main', __name__)
 
@@ -106,6 +107,10 @@ def initialize_user():
         user_instance = Client(username)
         public_key = export_public_key(user_instance.crypto.public_key)
         fingerprint = calculate_fingerprint(user_instance.crypto.public_key)
+
+        our_clients = send_our_clients()
+        our_clients[fingerprint] = user_instance
+
         return jsonify({"public_key": public_key.decode(), "username": username, "fingerprint": fingerprint}), 200
     else:
         return jsonify({"error": "Username is required"}), 400
@@ -119,3 +124,4 @@ def get_all_clients():
 @main.route('/favicon.ico')
 def favicon():
     return send_from_directory('static', 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    

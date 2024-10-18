@@ -31,7 +31,6 @@ class Crypto:
                     label=None
                 )
             )
-        
         except Exception as e:
             print(f"Failed to encrypt key: {e}")
             raise 

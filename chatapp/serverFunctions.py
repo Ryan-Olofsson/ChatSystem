@@ -11,6 +11,8 @@ import requests
 
 app = Flask(__name__)
 
+our_client_instances = {} # this is the public keys paired with the client instances of server owned clients
+
 our_connected_clients = {} # this is the clients that we are connected to
 
 servers_clients = {} # this is the clients of other servers
@@ -48,7 +50,7 @@ def handle_chat(message):
     if not all([destination_servers, iv, symm_keys, chat_data]):
         return jsonify({"error": "Missing required fields"}), 400
     
-    socketio.emit('chat_message', message, to='everyone')
+    handle_chat_message(message)
     return jsonify({"status": "Chat message forwarded successfully"}), 200
 
 def handle_client_list_request(): # not sure if this is right - it is not right. need to know where we track other servers so i can pass that info.
@@ -160,3 +162,21 @@ def update_connected_clients_from_server():
 
 def send_all_clients():
     return all_clients
+
+def send_our_clients():
+    return our_client_instances
+
+def send_our_connected_clients():
+    return our_connected_clients
+
+
+def handle_chat_message(message):
+    for our__connected_client in our_connected_clients:
+        user_instance = our_client_instances.get(our__connected_client)
+
+        try:
+            decrypted_message = user_instance.process_signed_message(message)
+            socketio.emit("chat", {"message": decrypted_message}, broadcast=True)
+        except:
+            continue
+    

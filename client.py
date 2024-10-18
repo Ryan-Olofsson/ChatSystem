@@ -5,9 +5,9 @@ import requests
 import re
 from crypto import Crypto, calculate_fingerprint, export_public_key
 from cryptography.hazmat.primitives import serialization
-from chatapp.serverFunctions import get_Connected_Clients
+from chatapp.serverFunctions import send_all_clients
 from chatapp.extensions import socketio
-import socketio as socketio_client
+from flask_socketio import emit
 
 
 class Client:
@@ -19,13 +19,7 @@ class Client:
         self.fingerprint = calculate_fingerprint(self.crypto.public_key)
         self.counter = 0
         self.received_counters = {}  # To track counters for each sender
-
-        self.sio = socketio_client.Client()
-        # self.connect_to_server("http://127.0.0.1:5000")  # Replace with your server address
-
-    def connect_to_server(self, server_address):
-        self.sio.connect(server_address)  # Connect to the server
-        print(f"Connected to server at {server_address}")
+        
 
     # Send a signed hello message
     def send_hello(self):
@@ -63,10 +57,12 @@ class Client:
     # Encrypt and send a chat message to specified recipients
     def send_chat_message(self, message, recipients, destination_servers):
         try:
+            # print("Message: ", message)
+            # print("recipients: ", recipients)
+            # print("destination_servers: ", destination_servers)
 
-            # Message sanitisation, may need to sanitise recipients and destination_servers as well
+            # Message sanitisation
             message = re.sub(r'[^\w\s]', '', message)
-
 
             # Define chat content and chat data lists with entries matching the specification
             chat_content = {
@@ -81,7 +77,6 @@ class Client:
                 "iv": None,
                 "chat": chat_content
             }
-
 
             # Set variable for initialising the iv and symm_key
             first = True
@@ -125,11 +120,8 @@ class Client:
             # Sign the message
             chat_data = self.create_signed_message(chat_data)
 
+            return(chat_data)
 
-            # socketio.emit('signed_data_chat', chat_data)
-
-            return json.dumps(chat_data)
-        
         except Exception as e:
             print(f"Failed to send chat message: {e}")
             raise
@@ -149,51 +141,9 @@ class Client:
         # socketio.emit('signed_data_public', public_chat_message)
         return json.dumps(public_chat_message)
 
-
-    # # Should be a JS function
-    # def request_client_list(self):
-    #     # Request the list of connected clients from the server
-    #     request = {
-    #         "type": "client_list_request"
-    #     }
-    #     self.ws.send(json.dumps(request))
-
-    # def upload_file(self, file_path):
-    #     # Upload a file to the server
-    #     with open(file_path, 'rb') as file:
-    #         response = requests.post(f"http://{self.server_address}/api/upload", files={'file': file})
-    #     if response.status_code == 200:
-    #         return response.json()['file_url']
-    #     else:
-    #         raise Exception(f"File upload failed with status code {response.status_code}")
-
-    # def download_file(self, file_url):
-    #     # Download a file from the server
-    #     response = requests.get(file_url)
-    #     if response.status_code == 200:
-    #         return response.content
-    #     else:
-    #         raise Exception(f"File download failed with status code {response.status_code}")
-
-    # # Shouldnt need as only handling signed messages
-    # def handle_incoming_message(self, message):
-    #     # Process incoming messages based on their type
-    #     message = json.loads(message)
-        
-    #     if message['type'] == 'signed_data':
-    #         self.process_signed_message(message)
-    #     elif message['type'] == 'client_list':
-    #         self.process_client_list(message)
-    #     else:
-    #         print(f"Received unknown message type: {message['type']}")
-
     # Handles messages forwarded by the server
-    def process_signed_message(self, message, pub_key):
+    def process_signed_message(self, message):
         try:
-
-            # Message sanitisation
-            message = json.loads(message)
-
             # Check to see if the message is signed data
             if message['type'] != 'signed_data':
                 print(f"Received unknown message type: {message['type']}")
@@ -254,41 +204,35 @@ class Client:
             elif data['type'] == 'public_chat':
                 sender_fingerprint = data['sender']
 
-            # Set default case
+
+            # print("Client:", self.fingerprint)
+            # print("Sender fingerprint:", sender_fingerprint)
+            # print("Message:", decrypted_message)
+
+
+            # Search through servers connected clients to find the public key matching the senders fingerprints
             sender_public_key = None
-            print("Client:", self.fingerprint)
-            print("Sender fingerprint:", sender_fingerprint)
-            print("Message:", decrypted_message)
-
-
-            # ------- TEST DATA -------
-            connected_clients = {}
-
-            test_fingerprint = serialization.load_pem_public_key(b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----")
-            connected_clients[calculate_fingerprint(test_fingerprint)] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnIRtyWKnSkzKbGWxz5jL\ne/7zmjF360CTsYEtj/3G6W+6vHTxIJLt93eQe8sLGHypACTKHwNQjK8AthK1qyCq\nrYAe+epHV5rp1WNG87NQEDvD1dOcWugA5v77ZsD3Jkw1JZFv/AXCEtUTvv+Mx8Rz\nCthFEf+5g9vINNZuG0ZFZM5bjH8wdXylXa2cyKc9gZEZP+yr+Rh9vjtXR+2c/hwA\nQqanSNFJvf6W8Ij9R0uk+uG3MscFer+AbSknbKengM/yfB4t2Sgmg3w/cJPEJ7OY\nnJbN2LgwncQC3jYwfenniZJ9j9fgCEyVz2Ck88D2FySS/pPh/gIh9lp9KQHuNB9w\nCwIDAQAB\n-----END PUBLIC KEY-----"
-            
-            test_fingerprint_2 = serialization.load_pem_public_key(b"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----")
-            connected_clients[calculate_fingerprint(test_fingerprint_2)] = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvSlTreoBmEJuKyL4uqUP\nuUf+nr1cdt3qOWchtLJZmANCwOX0ZT+8Ut0gmzhmwZLaWUv/WANbb4H5e8KbIrQH\nzTk7X13XOCR4jF7zv9EyY/K/9eWIB/gscWZwxVvj00ZBUIqVuq6OAcElhVdQ/kqx\n8IvHAO3rZvnYV/esm+Svr8/NnSYK8n96s0FTM9nUCRr9HSnCSxs9DGd16bGnnx28\nDhUVo3e9MxnPFPKe4DqZ075jn5ngPFjnoJBr0vEEYKd/INqcwPtJ8VNoICFyiLTE\nWTDan+UdqLjcZkxBzVNNEd6Q8SWgwod9rpXfaE5kAluUf3RpV2ffzQ9rbajAaWF0\nxwIDAQAB\n-----END PUBLIC KEY-----"
-
-            connected_clients[sender_fingerprint] = pub_key
-            # -------------------------
-
-
-            # # Search through servers connected clients to find the public key matching the senders fingerprints
-            # connected_clients = get_Connected_Clients()
-
-            for client in connected_clients.keys():
-                if client == sender_fingerprint:
-                    sender_public_key = connected_clients[client]
+            all_clients = send_all_clients()
+            sender_public_key = all_clients.get(sender_fingerprint)
 
             # Return if the fingerprint of sender can't be found in connected clients
-            if sender_public_key is None:
+            if sender_public_key == None:
                 print("Received chat message not intended for this client")
                 return
-            
+
+            # Convert the public key into a format acceptable for the verification 
+            try:
+                sender_public_key = sender_public_key.encode()
+                sender_public_key = serialization.load_pem_public_key(sender_public_key)    
+            except Exception as e:
+                print(f"Failed to load public key: {e}")
+                return
+
             # Verify the signature of the message
             if not self.crypto.verify(json.dumps(data).encode() + str(counter).encode(), signature, sender_public_key):
+                print("Signature verification failed.")
                 return
+            
             
             # Verify the counter of the message
             if not self.verify_counter(sender_fingerprint, counter):
@@ -300,8 +244,9 @@ class Client:
                 print(f"Received public chat message: {data['message']}")
             elif data['type'] == 'chat':
                 print(f"Received chat message from {sender_fingerprint}: {decrypted_message}")
+            return decrypted_message
 
-            print("-------------------------------------")
+            # print("-------------------------------------")
         except Exception as e:
             print(f"Failed to process message: {e}")
 
@@ -318,46 +263,7 @@ class Client:
             return True
         return False
 
-    # def process_chat_message(self, data):
-
-    #     # Decrypt and process incoming chat messages
-    #     try:
-
-    #         # sender_fingerprint, decrypted_message = self.crypto.decrypt_message(self.fingerprint, data)
-    #         # chat_content = json.loads(decrypted_message)
-
-    #         # Check if the client was the intended recipient of the message
-    #         # if sender_fingerprint != None:
-    #         #     return sender_fingerprint, decrypted_message
-    #         # else:
-    #         return None, None
-    #     except Exception as e:
-    #         print(f"Error decrypting message: {e}")
-
-    # # Should be a JS function
-    # def process_client_list(self, message):
-    #     # Process and display the list of connected clients
-    #     print("Received client list:")
-    #     for server in message['servers']:
-    #         print(f"Server: {server['address']}")
-    #         for client_key in server['clients']:
-    #             print(f"  Client: {self.crypto.calculate_fingerprint()}")
-
-    # # Should be a JS function
-    # def run(self):
-    #     # Main loop to handle incoming messages
-    #     self.connect_to_server()
-    #     while True:
-    #         try:
-    #             message = self.ws.recv()
-    #             self.handle_incoming_message(message)
-    #         except websocket.WebSocketConnectionClosedException:
-    #             print("WebSocket connection closed")
-    #             break
-    #         except Exception as e:
-    #             print(f"Error: {e}")
-
-# Example usage
+# Testing
 if __name__ == "__main__":
     client1 = Client("test")
     client2 = Client("test2")
@@ -366,7 +272,7 @@ if __name__ == "__main__":
     recipients = {export_public_key(client2.crypto.public_key), export_public_key(client3.crypto.public_key)}
 
     # Test with multiple servers
-    encrypted_message = client1.send_chat_message("Long message wooooo I love long messages", recipients, "localhost")
+    encrypted_message = client1.send_chat_message("Long message wooooo I love long messages", recipients, ["localhost"])
     client2.process_signed_message(encrypted_message, client1.crypto.public_key)
     client3.process_signed_message(encrypted_message, client1.crypto.public_key)
 
@@ -376,11 +282,11 @@ if __name__ == "__main__":
 
     # Replay attack test
     client1.counter = 0
-    encrypted_message = client1.send_chat_message("Replay attack test", recipients, "localhost")
+    encrypted_message = client1.send_chat_message("Replay attack test", recipients, ["localhost"])
     client2.process_signed_message(encrypted_message, client1.crypto.public_key)
     print("-------------------------------------")
 
     # Invalid siganture test
     client1.crypto.public_key = "bleh"
-    encrypted_message = client1.send_chat_message("Invalid signature test", recipients, "localhost")
+    encrypted_message = client1.send_chat_message("Invalid signature test", recipients, ["localhost"])
     client3.process_signed_message(encrypted_message, client1.crypto.public_key)
