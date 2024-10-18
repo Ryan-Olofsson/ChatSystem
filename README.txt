@@ -1,6 +1,6 @@
 # Olaf's Neighbourhood Protocol (ONP)
 
-Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
+Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935, Isaak Goodwin.
 
 This is a simple implementation of a secure messaging system using WebSockets and Flask.
 
