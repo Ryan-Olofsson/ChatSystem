@@ -6,47 +6,48 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+        <!-- Link to external CSS files -->
         <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
+        <!-- Include Socket.IO and Bootstrap JS -->
         <script src="https://cdn.socket.io/4.1.3/socket.io.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" defer></script>
         <script type="module" src="{{ url_for('static', filename='userInitial.js') }}"></script>
-
-        <!-- <script src="{{ url_for('static', filename='script.js') }}" defer></script>
-        <script src="{{ url_for('static', filename='userInitial.js') }}" defer></script> -->
     </head>
     <script>
+    // Function to update the selected chat display based on dropdown selection
     function updateSelectedChat() {
         const dropdown = document.getElementById("onlineUsersDropdown");
         const selectedFingerprint = dropdown.value; // Get the selected value
         const selectedChatElement = document.getElementById("selectedChat");
 
+        // Update the chat display based on the selected user
         if (selectedFingerprint === "public") {
             selectedChatElement.textContent = "Talking to: Public Chat"; // Reset if no selection
         } else if (selectedFingerprint) {
             selectedChatElement.textContent = `Talking to: ${selectedFingerprint}`; // Update the text
         } else {
             selectedChatElement.textContent = "Talking to: None"; // Reset if no selection
-            }
         }
+    }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            updateSelectedChat(); // Update the selected chat on page load
-        });
+    // Update the selected chat on page load
+    document.addEventListener("DOMContentLoaded", () => {
+        updateSelectedChat();
+    });
     </script>
     <body>
         <div id="container" class="container-fluid vh-100 d-flex flex-column">
             <h2 id="title">OLAF's Neighbourhood Protocol</h2>
             <div class="row">
-                <!-- Dropdown List Users Online and option for group chat message to all users online-->
-                <!-- When user selected person messaging to also changes and retreive chat history in current connection -->
+                <!-- Dropdown for selecting online users and option for group chat -->
                 <div class="dropdown col-6 d-flex align-items-center">
                     <label for="onlineUsersDropdown">Online Users:</label>
                     <select id="onlineUsersDropdown" onchange="updateSelectedChat()">
-                        <!-- <option value="" disabled selected>No Online Users</option> -->
+                        <!-- Option for public chat -->
                         <option value="public">Public Chat</option>
                     </select>
                     <button id="refreshClientsButton" class="btn btn-secondary">
@@ -57,6 +58,7 @@
                     <button id="groupChat" class="btn btn-primary w-100" type="submit">
                         Chat in Group
                     </button>
+                    <!-- Modal for group chat -->
                     <div class="modal fade" id="groupChatModal" tabindex="-1" aria-labelledby="groupChatModalLabel" aria-hidden="true">
                         <div class="modal-dialog">
                             <div class="modal-content">
@@ -88,10 +90,9 @@
                          </ul>
                     </div>
                 </div>
-                <!-- <form id="margin" class="d-flex"> -->
-                    <div class="d-flex">
-                        <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
-                        <button id="uploadFiles" class="btn btn-primary" type="button">
+                <div class="d-flex">
+                    <input id="messageInput" type="text" class="form-control" placeholder="Send message here..." autocomplete="off">
+                    <button id="uploadFiles" class="btn btn-primary" type="button">
                         Upload File
                     </button>
                     <div id="fileUploadContainer" class="d-none">
@@ -104,26 +105,23 @@
                         </button>
                     </form>
                 </div>
-                <!-- </form> -->
             </div>        
         </div>
         <script type="module">
+            // Import user initialization functions
             import { initializeUser, getUserFingerprint } from "{{ url_for('static', filename='userInitial.js') }}";
-            const socket = io();
+            const socket = io(); // Initialize Socket.IO connection
 
+            // Connect to the Socket.IO server
             socket.connect();
             socket.on("connect", async () => {
-                await initializeUser();
-                const userFingerprint = getUserFingerprint();
+                await initializeUser(); // Initialize user on connection
+                const userFingerprint = getUserFingerprint(); // Get user fingerprint
                 console.log("User Fingerprint balls:", userFingerprint);
                 // Request the list of connected clients
             });
 
-
             // Send messages to the server to be broadcasted to all clients
-            // Need to write conditional functionality that encrypts the message based on the public key of the selected recipient
-            // If public message, no encryption required
-            // If multiple recipients, encrypt with each public key and send separate JSON packages
             document.getElementById("margin").addEventListener("submit", (event) => {
                 event.preventDefault(); // Prevent default form submission
                 const messageInput = document.getElementById("messageInput");
@@ -131,10 +129,12 @@
                 const dropdown = document.getElementById("onlineUsersDropdown");
                 const selectedFingerprint = dropdown.value;
                 const chatHistory = document.getElementById("chatHistory");
-                const userFingerprint = getUserFingerprint()
+                const userFingerprint = getUserFingerprint();
+                
                 if (message !== "") {
                     let messageType = "Public";
                     let recipientInfo = "";
+                    // Emit public or private chat messages based on selection
                     if (selectedFingerprint === "public") {
                         socket.emit("public_chat", {
                             message: message
@@ -148,26 +148,28 @@
                             from: userFingerprint
                         });
                     }
+                    // Append the message to chat history
                     const li = document.createElement("li");
                     li.textContent = `[${messageType}${recipientInfo}]: ${message}`;
                     chatHistory.appendChild(li);
-                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                    chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to the bottom
                     messageInput.value = ""; // Clear the input after sending
                 }
             });
 
+            // Refresh the list of online clients
             document.getElementById("refreshClientsButton").addEventListener("click", async () => {
                 const response = await fetch('/api/get_all_clients'); // Adjust the endpoint as needed
                 if (response.ok) {
                     const allClients = await response.json();
                     const userFingerprint = getUserFingerprint();
-                    // console.log("User Fingerprint balls:", userFingerprint);
-                    updateDropdown(allClients, userFingerprint);
+                    updateDropdown(allClients, userFingerprint); // Update the dropdown with new clients
                 } else {
                     console.error("Failed to fetch all clients");
                 }
             });
 
+            // Update the dropdown with the list of online clients
             function updateDropdown(allClients, userFingerprint) {
                 const dropdown = document.getElementById("onlineUsersDropdown");
                 dropdown.innerHTML = ""; // Clear existing options
@@ -180,7 +182,7 @@
                 for (let i = 0; i < fingerprints.length; i++) {
                     const fingerprint = fingerprints[i];
                     if (fingerprint === userFingerprint) 
-                        continue;
+                        continue; // Skip the current user
                     const option = document.createElement("option");
                     option.value = fingerprint;
                     option.text = fingerprint; // You can format this as needed
@@ -188,15 +190,15 @@
                     hasOptions = true;
                 }
                 if (hasOptions) {
-                    dropdown.selectedIndex = 0;
-                    updateSelectedChat();
+                    dropdown.selectedIndex = 0; // Select the first option
+                    updateSelectedChat(); // Update the chat display
                 }
             }
 
-                    // Toggle file upload container visibility
+            // Toggle file upload container visibility
             document.getElementById("uploadFiles").addEventListener("click", () => {
                 const container = document.getElementById("fileUploadContainer");
-                container.classList.toggle("d-none");
+                container.classList.toggle("d-none"); // Show or hide the file upload container
             });
 
             // Handle file upload
@@ -205,7 +207,7 @@
                 const serverUrl = 'http://127.0.0.1:5000';
 
                 if (fileInput.files.length === 0) {
-                    alert("Please select a file to upload.");
+                    alert("Please select a file to upload."); // Alert if no file is selected
                     return;
                 }
 
@@ -220,18 +222,16 @@
 
                 if (response.ok) {
                     const result = await response.json();
-    
                     let url = result.file_url.body.file_url.trim();
                     url = url.replace('./', '');
                     url = url.replace(/ /g, "%20");
-                    // console.log("File uploaded successfully:", result.file_url);
-                    alert("File uploaded successfully! File URL: " + url);
+                    alert("File uploaded successfully! File URL: " + url); // Alert on successful upload
                 } else {
                     const error = await response.json();
                     if (response.status === 413) {
-                        alert("File size exceeds the 5 MB limit.");
+                        alert("File size exceeds the 5 MB limit."); // Alert for file size limit
                     } else {
-                        alert("File upload failed.");
+                        alert("File upload failed."); // Alert for upload failure
                     }
                 }
             });
@@ -242,20 +242,20 @@
                 a.href = fileUrl;
                 a.download = ''; // You can specify a filename here
                 document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                a.click(); // Trigger download
+                document.body.removeChild(a); // Clean up
             }
-            // List for chat messages that are broadcasted from the server
-            // Need to write conditional functionality that handles incoming messages
-            // If decryption successful with private key, message is passed, if not ignore
+
+            // Listen for incoming chat messages from the server
             socket.on("chat", (data) => {
                 let ul = document.getElementById("chatHistory");
                 let li = document.createElement("li");
-                li.appendChild(document.createTextNode(data["message"]));
+                li.appendChild(document.createTextNode(data["message"])); // Display the message
                 ul.appendChild(li);
                 ul.scrollTop = ul.scrollHeight; // Scroll to the bottom
             });
 
+            // Open group chat modal and populate recipients list
             document.getElementById("groupChat").addEventListener("click", () => {
                 const recipientsList = document.getElementById("recipientsList");
                 recipientsList.innerHTML = ""; // Clear existing recipients
@@ -277,19 +277,21 @@
                         const div = document.createElement("div");
                         div.appendChild(checkbox);
                         div.appendChild(label);
-                        recipientsList.appendChild(div);
+                        recipientsList.appendChild(div); // Add recipient checkboxes
                     }
                 }
-            const groupChatModal = new bootstrap.Modal(document.getElementById("groupChatModal"));
-            groupChatModal.show();
+                const groupChatModal = new bootstrap.Modal(document.getElementById("groupChatModal"));
+                groupChatModal.show(); // Show the group chat modal
             });
+
+            // Handle group chat form submission
             document.getElementById("groupChatForm").addEventListener("submit", (event) => {
                 event.preventDefault();
                 const selectedRecipients = [];
                 const checkboxes = document.querySelectorAll("#recipientsList input[type='checkbox']:checked");
-                const userFingerprint = getUserFingerprint()
+                const userFingerprint = getUserFingerprint();
                 checkboxes.forEach(checkbox => {
-                    selectedRecipients.push(checkbox.value);
+                    selectedRecipients.push(checkbox.value); // Collect selected recipients
                 });
                 const message = document.getElementById("groupMessageInput").value;
                 if (message && selectedRecipients.length > 0) {
@@ -298,17 +300,16 @@
                         recipients: selectedRecipients,
                         from: userFingerprint
                     });
-                    console.log(selectedRecipients)
                     const chatHistory = document.getElementById("chatHistory");
                     const li = document.createElement("li");
-                    li.textContent = `[Group Chat] ${message}`;
+                    li.textContent = `[Group Chat] ${message}`; // Display group chat message
                     chatHistory.appendChild(li);
-                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                    chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to the bottom
 
                     const groupChatModal = bootstrap.Modal.getInstance(document.getElementById("groupChatModal"));
-                    groupChatModal.hide();
+                    groupChatModal.hide(); // Hide the modal after sending
                 } else {
-                    alert("Please select at least one recipient and enter a message."); 
+                    alert("Please select at least one recipient and enter a message."); // Alert if no recipients or message
                 }
             });
 

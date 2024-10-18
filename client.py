@@ -1,7 +1,6 @@
 # Ryan Olofsson a1864245, Tyler Chapman 1851834, Kian Esmailzadeh a1851935
 import json
 import base64
-import requests
 import re
 from crypto import Crypto, calculate_fingerprint, export_public_key
 from cryptography.hazmat.primitives import serialization
@@ -11,7 +10,7 @@ from flask_socketio import emit
 
 
 class Client:
-    # Server address is useless rn
+    # Init for client
     def __init__(self, username):
         self.server_address = None
         self.username = username
@@ -57,10 +56,6 @@ class Client:
     # Encrypt and send a chat message to specified recipients
     def send_chat_message(self, message, recipients, destination_servers):
         try:
-            # print("Message: ", message)
-            # print("recipients: ", recipients)
-            # print("destination_servers: ", destination_servers)
-
             # Message sanitisation
             message = re.sub(r'[^\w\s]', '', message)
 
@@ -88,7 +83,6 @@ class Client:
                 recipient_public_key = serialization.load_pem_public_key(recipient)
 
                 # If its the first recipient, then encrypt the message, then extract and append the iv and sym_key
-                # Only need to get the iv and sym_key once
                 if first:
                     encrypted_data = self.crypto.encrypt_message(message, recipient_public_key)
 
@@ -120,6 +114,7 @@ class Client:
             # Sign the message
             chat_data = self.create_signed_message(chat_data)
 
+            # Return the signed message
             return(chat_data)
 
         except Exception as e:
@@ -138,8 +133,8 @@ class Client:
             "message": message
         })
 
-        # socketio.emit('signed_data_public', public_chat_message)
-        return json.dumps(public_chat_message)
+        # Emit public chat
+        socketio.emit('signed_data_public', public_chat_message)
 
     # Handles messages forwarded by the server
     def process_signed_message(self, message):
@@ -171,7 +166,6 @@ class Client:
 
                     # Decode symmetric key and try to decrypt using private key
                     encrypted_sym_key = base64.b64decode(b64_sym_key)
-
                     try:
                         sym_key = self.crypto.asymmetric_decrypt(encrypted_sym_key)
                     except Exception as e:
@@ -194,7 +188,6 @@ class Client:
                                 decrypted_message = decrypted_message.decode()
                                 break
                         except Exception as e:
-                            # print(f"Error decrypting participant fingerprint: {e}")
                             continue 
 
                 # Return if client isn't intended receiver
@@ -204,18 +197,12 @@ class Client:
             elif data['type'] == 'public_chat':
                 sender_fingerprint = data['sender']
 
-
-            # print("Client:", self.fingerprint)
-            # print("Sender fingerprint:", sender_fingerprint)
-            # print("Message:", decrypted_message)
-
-
-            # Search through servers connected clients to find the public key matching the senders fingerprints
+            # Get public key matching the fingerprint of the sender
             sender_public_key = None
             all_clients = send_all_clients()
             sender_public_key = all_clients.get(sender_fingerprint)
 
-            # Return if the fingerprint of sender can't be found in connected clients
+            # Return if the fingerprint of sender can't be found in the client list
             if sender_public_key == None:
                 print("Received chat message not intended for this client")
                 return
@@ -244,9 +231,10 @@ class Client:
                 print(f"Received public chat message: {data['message']}")
             elif data['type'] == 'chat':
                 print(f"Received chat message from {sender_fingerprint}: {decrypted_message}")
+
+            # Return the decrypted message
             return decrypted_message
 
-            # print("-------------------------------------")
         except Exception as e:
             print(f"Failed to process message: {e}")
 
@@ -262,31 +250,3 @@ class Client:
             self.received_counters[sender_fingerprint] = counter
             return True
         return False
-
-# Testing
-if __name__ == "__main__":
-    client1 = Client("test")
-    client2 = Client("test2")
-    client3 = Client("test3")
-
-    recipients = {export_public_key(client2.crypto.public_key), export_public_key(client3.crypto.public_key)}
-
-    # Test with multiple servers
-    encrypted_message = client1.send_chat_message("Long message wooooo I love long messages", recipients, ["localhost"])
-    client2.process_signed_message(encrypted_message, client1.crypto.public_key)
-    client3.process_signed_message(encrypted_message, client1.crypto.public_key)
-
-    # Public chat test
-    message = client1.send_public_chat_message("'testing' @#$%*g%&")
-    client3.process_signed_message(message, client1.crypto.public_key)
-
-    # Replay attack test
-    client1.counter = 0
-    encrypted_message = client1.send_chat_message("Replay attack test", recipients, ["localhost"])
-    client2.process_signed_message(encrypted_message, client1.crypto.public_key)
-    print("-------------------------------------")
-
-    # Invalid siganture test
-    client1.crypto.public_key = "bleh"
-    encrypted_message = client1.send_chat_message("Invalid signature test", recipients, ["localhost"])
-    client3.process_signed_message(encrypted_message, client1.crypto.public_key)
